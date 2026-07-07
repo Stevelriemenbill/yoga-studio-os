@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     # Optional full override (used for tests with sqlite)
     DATABASE_URL: str | None = None
 
+    # Redis (background worker + pub/sub for websockets)
+    REDIS_URL: str = "redis://localhost:6379/0"
+    # Disable Redis-dependent features (worker/pubsub) e.g. in tests.
+    REDIS_ENABLED: bool = True
+
+    # Observability
+    SENTRY_DSN: str | None = None
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 

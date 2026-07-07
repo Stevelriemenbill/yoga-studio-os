@@ -1,15 +1,31 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import api_router
+from app.api.v1 import api_router, realtime
 from app.core.config import settings
+from app.core.events import start_listener, stop_listener
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_listener()
+    yield
+    await stop_listener()
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.PROJECT_NAME,
         openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
+        lifespan=lifespan,
     )
+
+    if settings.SENTRY_DSN:
+        import sentry_sdk
+
+        sentry_sdk.init(dsn=settings.SENTRY_DSN, environment=settings.ENVIRONMENT)
 
     if settings.BACKEND_CORS_ORIGINS:
         app.add_middleware(
@@ -21,6 +37,7 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(realtime.router, prefix=settings.API_V1_PREFIX)
 
     @app.get("/health", tags=["health"])
     async def health() -> dict[str, str]:

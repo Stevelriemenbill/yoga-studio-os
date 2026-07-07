@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user
+from app.core.events import publish
 from app.db.session import get_db
 from app.models.booking import BookingSource
 from app.models.member import Member
@@ -59,11 +60,17 @@ async def create_booking(
     )
     source = BookingSource.DROP_IN if data.drop_in else BookingSource.DIRECT
     try:
-        return await booking_service.create_booking(
+        booking = await booking_service.create_booking(
             db, current.tenant_id, session, member, source=source
         )
     except BookingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await publish(
+        current.tenant_id,
+        "booking.created",
+        {"session_id": str(data.session_id), "booking_id": str(booking.id)},
+    )
+    return booking
 
 
 @router.get("/session/{session_id}", response_model=list[BookingRead])
