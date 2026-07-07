@@ -1,0 +1,186 @@
+import pytest
+
+from tests.test_auth import REGISTER_PAYLOAD
+
+
+async def _auth_headers(client) -> dict:
+    reg = await client.post("/api/v1/auth/register", json=REGISTER_PAYLOAD)
+    token = reg.json()["token"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _make_course(client, headers, **overrides):
+    payload = {
+        "name": "Vinyasa Flow",
+        "level": "all",
+        "max_participants": 2,
+        "min_participants": 1,
+        "duration_minutes": 60,
+        **overrides,
+    }
+    resp = await client.post("/api/v1/courses", json=payload, headers=headers)
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+async def _make_session(client, headers, course_id, starts_at="2030-01-01T18:00:00"):
+    resp = await client.post(
+        f"/api/v1/courses/{course_id}/sessions",
+        json={"course_id": course_id, "starts_at": starts_at},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+async def _make_member(client, headers, first="Anna", last="Muster"):
+    resp = await client.post(
+        "/api/v1/members",
+        json={"first_name": first, "last_name": last},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+@pytest.mark.asyncio
+async def test_course_session_crud(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    session = await _make_session(client, headers, course["id"])
+    assert session["capacity"] == 2
+
+    # Session appears in calendar range
+    resp = await client.get(
+        "/api/v1/sessions",
+        params={"start": "2030-01-01T00:00:00", "end": "2030-01-02T00:00:00"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["available_spots"] == 2
+
+
+@pytest.mark.asyncio
+async def test_recurring_schedule_generates_sessions(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/schedule",
+        json={
+            "course_id": course["id"],
+            "weekdays": [0, 2],  # Monday, Wednesday
+            "start_time": "18:00:00",
+            "start_date": "2030-01-07",  # a Monday
+            "end_date": "2030-01-20",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    # Two full weeks, Mon+Wed => 4 sessions
+    assert len(resp.json()) == 4
+
+
+@pytest.mark.asyncio
+async def test_booking_fills_capacity_then_full(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers, max_participants=1)
+    session = await _make_session(client, headers, course["id"])
+    m1 = await _make_member(client, headers, "Anna")
+    m2 = await _make_member(client, headers, "Bea")
+
+    r1 = await client.post(
+        "/api/v1/bookings",
+        json={"session_id": session["id"], "member_id": m1["id"]},
+        headers=headers,
+    )
+    assert r1.status_code == 201, r1.text
+
+    r2 = await client.post(
+        "/api/v1/bookings",
+        json={"session_id": session["id"], "member_id": m2["id"]},
+        headers=headers,
+    )
+    assert r2.status_code == 409  # full
+
+
+@pytest.mark.asyncio
+async def test_cancel_promotes_waitlist(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers, max_participants=1)
+    session = await _make_session(client, headers, course["id"])
+    m1 = await _make_member(client, headers, "Anna")
+    m2 = await _make_member(client, headers, "Bea")
+
+    booking = (
+        await client.post(
+            "/api/v1/bookings",
+            json={"session_id": session["id"], "member_id": m1["id"]},
+            headers=headers,
+        )
+    ).json()
+
+    # m2 joins waitlist since session is full
+    wl = await client.post(
+        "/api/v1/waitlist",
+        json={"session_id": session["id"], "member_id": m2["id"]},
+        headers=headers,
+    )
+    assert wl.status_code == 201, wl.text
+
+    # Cancel m1 -> should offer the spot to m2
+    cancel = await client.post(
+        f"/api/v1/bookings/{booking['id']}/cancel", headers=headers
+    )
+    assert cancel.status_code == 200
+
+    entries = await client.get(
+        f"/api/v1/waitlist/session/{session['id']}", headers=headers
+    )
+    # m2 no longer "waiting" (moved to offered)
+    waiting = [e for e in entries.json() if e["status"] == "waiting"]
+    assert len(waiting) == 0
+
+
+@pytest.mark.asyncio
+async def test_rebook_moves_member(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers, max_participants=5)
+    s1 = await _make_session(client, headers, course["id"], "2030-01-01T18:00:00")
+    s2 = await _make_session(client, headers, course["id"], "2030-01-02T18:00:00")
+    m1 = await _make_member(client, headers)
+
+    booking = (
+        await client.post(
+            "/api/v1/bookings",
+            json={"session_id": s1["id"], "member_id": m1["id"]},
+            headers=headers,
+        )
+    ).json()
+
+    rebook = await client.post(
+        f"/api/v1/bookings/{booking['id']}/rebook",
+        json={"new_session_id": s2["id"]},
+        headers=headers,
+    )
+    assert rebook.status_code == 200, rebook.text
+    assert rebook.json()["session_id"] == s2["id"]
+    assert rebook.json()["source"] == "rebooked"
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation(client):
+    """A member from tenant A must not be visible/bookable in tenant B."""
+    headers_a = await _auth_headers(client)
+    member_a = await _make_member(client, headers_a)
+
+    # Second tenant
+    reg_b = await client.post(
+        "/api/v1/auth/register",
+        json={**REGISTER_PAYLOAD, "studio_slug": "other", "studio_name": "Other"},
+    )
+    headers_b = {"Authorization": f"Bearer {reg_b.json()['token']['access_token']}"}
+
+    # Tenant B cannot see tenant A's member
+    resp = await client.get(f"/api/v1/members/{member_a['id']}", headers=headers_b)
+    assert resp.status_code == 404

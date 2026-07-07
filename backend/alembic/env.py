@@ -9,7 +9,7 @@ from app.core.config import settings
 from app.db.base import Base
 
 # Import all models so they register with Base.metadata
-from app.models import tenant, user  # noqa: F401
+import app.models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_uri)
