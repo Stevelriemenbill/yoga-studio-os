@@ -1,11 +1,14 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    ai,
     analytics,
     auth,
+    automations,
     bookings,
     checkin,
     courses,
+    events,
     members,
     notifications,
     training,
@@ -24,3 +27,6 @@ api_router.include_router(checkin.attendance_router)
 api_router.include_router(training.router)
 api_router.include_router(notifications.router)
 api_router.include_router(analytics.router)
+api_router.include_router(automations.router)
+api_router.include_router(ai.router)
+api_router.include_router(events.router)
