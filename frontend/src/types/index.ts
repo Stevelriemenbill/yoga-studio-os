@@ -49,7 +49,7 @@ export interface StudioRegistration {
 }
 
 // --- Members ---
-export type MembershipType = 'none' | 'unlimited' | 'credits' | 'trial'
+export type MembershipType = 'none' | 'drop_in' | 'punch_card' | 'unlimited'
 
 export interface Member {
   id: string

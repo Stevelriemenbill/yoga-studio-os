@@ -18,10 +18,14 @@ const error = ref('')
 
 const membershipOptions: { label: string; value: MembershipType }[] = [
   { label: 'Keine', value: 'none' },
+  { label: 'Drop-in', value: 'drop_in' },
+  { label: '10er-Karte', value: 'punch_card' },
   { label: 'Unbegrenzt', value: 'unlimited' },
-  { label: 'Guthaben', value: 'credits' },
-  { label: 'Testphase', value: 'trial' },
 ]
+
+function membershipLabel(value: string): string {
+  return membershipOptions.find((o) => o.value === value)?.label ?? value
+}
 
 const showDialog = ref(false)
 const saving = ref(false)
@@ -140,7 +144,7 @@ onMounted(load)
       <Column field="email" header="E-Mail" />
       <Column header="Mitgliedschaft">
         <template #body="{ data }">
-          <Tag :value="data.membership_type" />
+          <Tag :value="membershipLabel(data.membership_type)" />
         </template>
       </Column>
       <Column field="credits" header="Guthaben" />
