@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,15 +38,17 @@ class Settings(BaseSettings):
     SENTRY_DSN: str | None = None
     METRICS_ENABLED: bool = True
 
-    # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    # CORS — comma-separated string (avoids pydantic-settings JSON coercion of
+    # list fields from env vars). Use the `cors_origins` property to consume.
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def _split_cors(cls, v: str | list[str]) -> list[str]:
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.BACKEND_CORS_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
     @property
     def sqlalchemy_database_uri(self) -> str:

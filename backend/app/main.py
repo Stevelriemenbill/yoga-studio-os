@@ -27,10 +27,10 @@ def create_app() -> FastAPI:
 
         sentry_sdk.init(dsn=settings.SENTRY_DSN, environment=settings.ENVIRONMENT)
 
-    if settings.BACKEND_CORS_ORIGINS:
+    if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=settings.BACKEND_CORS_ORIGINS,
+            allow_origins=settings.cors_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
