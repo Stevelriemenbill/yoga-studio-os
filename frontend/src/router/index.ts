@@ -26,6 +26,56 @@ const router = createRouter({
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
         },
+        {
+          path: 'courses',
+          name: 'courses',
+          component: () => import('@/views/CoursesView.vue'),
+        },
+        {
+          path: 'members',
+          name: 'members',
+          component: () => import('@/views/MembersView.vue'),
+        },
+        {
+          path: 'bookings',
+          name: 'bookings',
+          component: () => import('@/views/BookingsView.vue'),
+        },
+        {
+          path: 'checkin',
+          name: 'checkin',
+          component: () => import('@/views/CheckinView.vue'),
+        },
+        {
+          path: 'training',
+          name: 'training',
+          component: () => import('@/views/TrainingView.vue'),
+        },
+        {
+          path: 'events',
+          name: 'events',
+          component: () => import('@/views/EventsView.vue'),
+        },
+        {
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('@/views/AnalyticsView.vue'),
+        },
+        {
+          path: 'automations',
+          name: 'automations',
+          component: () => import('@/views/AutomationsView.vue'),
+        },
+        {
+          path: 'assistant',
+          name: 'assistant',
+          component: () => import('@/views/AssistantView.vue'),
+        },
+        {
+          path: 'notifications',
+          name: 'notifications',
+          component: () => import('@/views/NotificationsView.vue'),
+        },
       ],
     },
     {
