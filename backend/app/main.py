@@ -39,6 +39,17 @@ def create_app() -> FastAPI:
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
     app.include_router(realtime.router, prefix=settings.API_V1_PREFIX)
 
+    # Prometheus metrics at /metrics (opt-in; skipped if lib unavailable).
+    if settings.METRICS_ENABLED:
+        try:
+            from prometheus_fastapi_instrumentator import Instrumentator
+
+            Instrumentator().instrument(app).expose(
+                app, endpoint="/metrics", include_in_schema=False
+            )
+        except ImportError:
+            pass
+
     @app.get("/health", tags=["health"])
     async def health() -> dict[str, str]:
         return {"status": "ok", "environment": settings.ENVIRONMENT}

@@ -5,6 +5,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-do-not-use-in-prod")
 # Disable Redis-backed features (worker/pubsub) in tests.
 os.environ.setdefault("REDIS_ENABLED", "false")
+os.environ.setdefault("METRICS_ENABLED", "false")
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

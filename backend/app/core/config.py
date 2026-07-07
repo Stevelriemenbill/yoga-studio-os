@@ -37,6 +37,7 @@ class Settings(BaseSettings):
 
     # Observability
     SENTRY_DSN: str | None = None
+    METRICS_ENABLED: bool = True
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:5173"]
