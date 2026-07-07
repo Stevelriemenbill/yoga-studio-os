@@ -1,0 +1,17 @@
+{
+  "name": "Studio OS",
+  "short_name": "Studio OS",
+  "description": "Studio Operating System für Yogastudios",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
