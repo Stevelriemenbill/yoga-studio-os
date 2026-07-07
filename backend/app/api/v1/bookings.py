@@ -19,6 +19,7 @@ from app.schemas.booking import (
     WaitlistRead,
 )
 from app.services import booking as booking_service
+from app.services import integrations as integrations_service
 from app.services import waitlist as waitlist_service
 from app.services.booking import BookingError, BookingRepository
 from app.services.waitlist import WaitlistError, WaitlistRepository
@@ -66,6 +67,12 @@ async def create_booking(
     except BookingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     await publish(
+        current.tenant_id,
+        "booking.created",
+        {"session_id": str(data.session_id), "booking_id": str(booking.id)},
+    )
+    await integrations_service.dispatch_event(
+        db,
         current.tenant_id,
         "booking.created",
         {"session_id": str(data.session_id), "booking_id": str(booking.id)},

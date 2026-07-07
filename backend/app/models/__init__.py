@@ -14,6 +14,12 @@ from app.models.event import (
     EventType,
 )
 from app.models.insight import AIInsight, InsightType
+from app.models.integrations import (
+    ApiKey,
+    WebhookDelivery,
+    WebhookDeliveryStatus,
+    WebhookEndpoint,
+)
 from app.models.member import Member, MembershipType
 from app.models.notification import (
     Notification,
@@ -65,4 +71,8 @@ __all__ = [
     "EventRegistration",
     "EventType",
     "EventRegistrationStatus",
+    "ApiKey",
+    "WebhookEndpoint",
+    "WebhookDelivery",
+    "WebhookDeliveryStatus",
 ]
