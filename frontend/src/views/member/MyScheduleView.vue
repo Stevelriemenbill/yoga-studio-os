@@ -5,9 +5,11 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Dialog from 'primevue/dialog'
 
 import { listSchedule, listCourses, bookSession, myBookings } from '@/api/me'
-import type { Booking, Course, SessionWithStats } from '@/types'
+import { listCourseAttachments } from '@/api/courses'
+import type { Booking, Course, CourseAttachment, SessionWithStats } from '@/types'
 
 const { t, locale } = useI18n()
 
@@ -18,6 +20,38 @@ const loading = ref(false)
 const bookingId = ref<string | null>(null)
 const error = ref('')
 const info = ref('')
+
+// Course info dialog
+const showInfoDialog = ref(false)
+const infoCourse = ref<Course | null>(null)
+const infoAttachments = ref<CourseAttachment[]>([])
+
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
+const mediaHost = apiBase.replace(/\/api\/v1\/?$/, '')
+function attachmentUrl(att: CourseAttachment): string {
+  return att.url ? `${mediaHost}${att.url}` : '#'
+}
+
+const courseById = computed(() => new Map(courses.value.map((c) => [c.id, c])))
+
+function hasInfo(courseId: string): boolean {
+  const c = courseById.value.get(courseId)
+  return !!c && !!c.registration_info
+}
+
+async function openInfo(courseId: string) {
+  const c = courseById.value.get(courseId) ?? null
+  infoCourse.value = c
+  infoAttachments.value = []
+  showInfoDialog.value = true
+  if (c) {
+    try {
+      infoAttachments.value = await listCourseAttachments(c.id)
+    } catch {
+      /* attachments are optional */
+    }
+  }
+}
 
 const courseName = computed(() => {
   const map = new Map(courses.value.map((c) => [c.id, c.name]))
@@ -92,7 +126,18 @@ onMounted(load)
 
     <DataTable v-else :value="sessions" dataKey="id" responsiveLayout="scroll">
       <Column :header="t('myArea.course')">
-        <template #body="{ data }">{{ courseName(data.course_id) }}</template>
+        <template #body="{ data }">
+          <span>{{ courseName(data.course_id) }}</span>
+          <Button
+            v-if="hasInfo(data.course_id)"
+            icon="pi pi-info-circle"
+            text
+            rounded
+            size="small"
+            :aria-label="t('myArea.courseInfo')"
+            @click="openInfo(data.course_id)"
+          />
+        </template>
       </Column>
       <Column :header="t('myArea.when')">
         <template #body="{ data }">{{ fmtWhen(data.starts_at) }}</template>
@@ -127,6 +172,27 @@ onMounted(load)
         </template>
       </Column>
     </DataTable>
+
+    <Dialog
+      v-model:visible="showInfoDialog"
+      :header="infoCourse?.name ?? t('myArea.courseInfo')"
+      modal
+      :style="{ width: '460px' }"
+    >
+      <p v-if="infoCourse?.registration_info" class="reg-info">
+        {{ infoCourse.registration_info }}
+      </p>
+      <template v-if="infoAttachments.length">
+        <h4>{{ t('myArea.attachments') }}</h4>
+        <ul class="attachments">
+          <li v-for="att in infoAttachments" :key="att.id">
+            <a :href="attachmentUrl(att)" target="_blank" rel="noopener">
+              <i class="pi pi-file" /> {{ att.filename }}
+            </a>
+          </li>
+        </ul>
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -153,5 +219,26 @@ onMounted(load)
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+.reg-info {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+.attachments {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.attachments a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--p-primary-600, #059669);
+  text-decoration: none;
+}
+.attachments a:hover {
+  text-decoration: underline;
 }
 </style>

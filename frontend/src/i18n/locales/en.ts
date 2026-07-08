@@ -150,6 +150,8 @@ export default {
     spots: 'Open spots',
     place: 'Location',
     online: 'Online',
+    courseInfo: 'Course info',
+    attachments: 'Files',
     status: 'Status',
     action: 'Action',
     book: 'Book',
