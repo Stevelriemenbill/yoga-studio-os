@@ -445,6 +445,7 @@ export default {
   events: {
     title: 'Events',
     newEvent: 'New Event',
+    editEvent: 'Edit Event',
     loading: 'Loading…',
     registrationsFor: 'Registrations: {name}',
     selectMember: 'Select member',
@@ -484,6 +485,7 @@ export default {
       registrations: 'Registrations',
       publish: 'Publish',
       unpublish: 'Unpublish',
+      edit: 'Edit',
       cancel: 'Cancel',
       save: 'Save',
       register: 'Register',

@@ -54,6 +54,7 @@ function eur(cents: number): string {
 // Create event
 const showEventDialog = ref(false)
 const savingEvent = ref(false)
+const editingEventId = ref<string | null>(null)
 const eventForm = ref<{
   name: string
   type: EventType
@@ -96,6 +97,7 @@ async function load() {
 }
 
 function openEventDialog() {
+  editingEventId.value = null
   eventForm.value = {
     name: '',
     type: 'workshop',
@@ -110,12 +112,28 @@ function openEventDialog() {
   showEventDialog.value = true
 }
 
+function openEditEventDialog(ev: StudioEvent) {
+  editingEventId.value = ev.id
+  eventForm.value = {
+    name: ev.name,
+    type: ev.type,
+    starts_at: new Date(ev.starts_at),
+    ends_at: new Date(ev.ends_at),
+    location: ev.location ?? '',
+    capacity: ev.capacity,
+    price_eur: ev.price_cents / 100,
+    requires_deposit: ev.requires_deposit,
+    deposit_eur: ev.deposit_cents / 100,
+  }
+  showEventDialog.value = true
+}
+
 async function saveEvent() {
   if (!eventForm.value.starts_at || !eventForm.value.ends_at) return
   savingEvent.value = true
   error.value = ''
   try {
-    await createEvent({
+    const payload = {
       name: eventForm.value.name,
       type: eventForm.value.type,
       starts_at: eventForm.value.starts_at.toISOString(),
@@ -125,7 +143,12 @@ async function saveEvent() {
       price_cents: Math.round(eventForm.value.price_eur * 100),
       requires_deposit: eventForm.value.requires_deposit,
       deposit_cents: Math.round(eventForm.value.deposit_eur * 100),
-    })
+    }
+    if (editingEventId.value) {
+      await updateEvent(editingEventId.value, payload)
+    } else {
+      await createEvent(payload)
+    }
     showEventDialog.value = false
     await load()
   } catch {
@@ -232,6 +255,13 @@ onMounted(load)
       <Column :header="t('events.columns.actions')">
         <template #body="{ data }">
           <Button
+            :label="t('events.actions.edit')"
+            icon="pi pi-pencil"
+            size="small"
+            text
+            @click="openEditEventDialog(data)"
+          />
+          <Button
             :label="data.is_published ? t('events.actions.unpublish') : t('events.actions.publish')"
             :icon="data.is_published ? 'pi pi-eye-slash' : 'pi pi-eye'"
             size="small"
@@ -244,7 +274,7 @@ onMounted(load)
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showEventDialog" :header="t('events.newEvent')" modal :style="{ width: '480px' }">
+    <Dialog v-model:visible="showEventDialog" :header="editingEventId ? t('events.editEvent') : t('events.newEvent')" modal :style="{ width: '480px' }">
       <div class="form">
         <label>{{ t('events.form.name') }}</label>
         <InputText v-model="eventForm.name" />

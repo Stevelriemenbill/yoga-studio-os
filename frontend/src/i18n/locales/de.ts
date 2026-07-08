@@ -445,6 +445,7 @@ export default {
   events: {
     title: 'Events',
     newEvent: 'Neues Event',
+    editEvent: 'Event bearbeiten',
     loading: 'Wird geladen…',
     registrationsFor: 'Anmeldungen: {name}',
     selectMember: 'Mitglied wählen',
@@ -484,6 +485,7 @@ export default {
       registrations: 'Anmeldungen',
       publish: 'Veröffentlichen',
       unpublish: 'Zurückziehen',
+      edit: 'Bearbeiten',
       cancel: 'Abbrechen',
       save: 'Speichern',
       register: 'Anmelden',
