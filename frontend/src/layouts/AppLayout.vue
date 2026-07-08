@@ -139,7 +139,7 @@ async function logout() {
   padding: 0.5rem 0.75rem 1rem;
 }
 .logo {
-  color: #10b981;
+  color: var(--p-primary-color, #10b981);
   font-size: 1.4rem;
 }
 .brand__text {
@@ -201,8 +201,8 @@ async function logout() {
   color: #f1f5f9;
 }
 .nav-item.active {
-  background: #10b981;
-  color: #fff;
+  background: var(--p-primary-color, #10b981);
+  color: var(--p-primary-contrast-color, #fff);
   font-weight: 600;
 }
 .sidebar__footer {
@@ -222,8 +222,8 @@ async function logout() {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: #10b981;
-  color: #fff;
+  background: var(--p-primary-color, #10b981);
+  color: var(--p-primary-contrast-color, #fff);
   font-size: 0.78rem;
   font-weight: 700;
   flex-shrink: 0;
