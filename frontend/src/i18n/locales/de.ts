@@ -140,6 +140,7 @@ export default {
     book: 'Buchen',
     booked: 'Gebucht',
     full: 'Ausgebucht',
+    past: 'Vorbei',
     occupancy: '{booked} / {capacity} belegt',
     waitlist: '{count} auf Warteliste',
     bookSuccess: 'Platz gebucht.',

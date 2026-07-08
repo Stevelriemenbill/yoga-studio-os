@@ -155,6 +155,10 @@ function capacityOf(s: SessionWithStats): number {
   return s.capacity + s.overbooking_allowance
 }
 
+function isPast(s: SessionWithStats): boolean {
+  return new Date(s.starts_at).getTime() < Date.now()
+}
+
 onMounted(load)
 </script>
 
@@ -182,7 +186,7 @@ onMounted(load)
           v-for="s in sessionsForDay(d)"
           :key="s.id"
           class="slot"
-          :class="{ mine: isMember && isBooked(s.id) }"
+          :class="{ mine: isMember && isBooked(s.id), past: isPast(s) }"
         >
           <div class="slot-time">{{ fmtTime(s.starts_at) }}</div>
           <div class="slot-name">{{ courseName(s.course_id) }}</div>
@@ -190,6 +194,11 @@ onMounted(load)
           <!-- Member view: booking controls -->
           <template v-if="isMember">
             <Tag v-if="isBooked(s.id)" severity="success" :value="t('calendar.booked')" />
+            <Tag
+              v-else-if="isPast(s)"
+              severity="secondary"
+              :value="t('calendar.past')"
+            />
             <Tag
               v-else-if="s.available_spots <= 0"
               severity="warn"
@@ -289,6 +298,9 @@ onMounted(load)
 }
 .slot.mine {
   border-color: #10b981;
+}
+.slot.past {
+  opacity: 0.55;
 }
 .slot-time {
   font-size: 0.75rem;
