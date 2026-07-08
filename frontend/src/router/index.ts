@@ -88,6 +88,11 @@ const router = createRouter({
           name: 'notifications',
           component: () => import('@/views/NotificationsView.vue'),
         },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/SettingsView.vue'),
+        },
       ],
     },
     {

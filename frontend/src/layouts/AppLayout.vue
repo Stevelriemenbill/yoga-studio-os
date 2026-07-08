@@ -1,25 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 
 import { useAuthStore } from '@/stores/auth'
-import { NAV_GROUPS, canAccess, type NavGroup } from '@/config/navigation'
+import {
+  NAV_GROUPS,
+  ROUTE_TITLE_KEYS,
+  canAccess,
+  type NavGroup,
+} from '@/config/navigation'
 
 const auth = useAuthStore()
 const router = useRouter()
-
-const ROLE_LABELS: Record<string, string> = {
-  studio_admin: 'Studio-Admin',
-  studio_manager: 'Manager',
-  teacher: 'Lehrkraft',
-  reception: 'Empfang',
-  member: 'Mitglied',
-  trainee: 'Auszubildende:r',
-}
+const { t } = useI18n()
 
 const roleLabel = computed(() =>
-  auth.user ? (ROLE_LABELS[auth.user.role] ?? auth.user.role) : '',
+  auth.user ? t(`roles.${auth.user.role}`) : '',
 )
 
 const displayName = computed(
@@ -40,18 +38,14 @@ const initials = computed(() => {
 const visibleGroups = computed<NavGroup[]>(() => {
   const role = auth.user?.role
   return NAV_GROUPS.map((g) => ({
-    label: g.label,
+    labelKey: g.labelKey,
     items: g.items.filter((i) => canAccess(i, role)),
   })).filter((g) => g.items.length > 0)
 })
 
 const pageTitle = computed(() => {
-  const path = router.currentRoute.value.path
-  for (const g of NAV_GROUPS) {
-    const match = g.items.find((i) => i.to === path)
-    if (match) return match.label
-  }
-  return 'Studio OS'
+  const key = ROUTE_TITLE_KEYS[router.currentRoute.value.path]
+  return key ? t(key) : t('common.appName')
 })
 
 async function logout() {
@@ -65,12 +59,12 @@ async function logout() {
     <aside class="sidebar">
       <div class="brand">
         <span class="logo">◎</span>
-        <span>Studio OS</span>
+        <span>{{ t('common.appName') }}</span>
       </div>
 
       <nav class="nav">
-        <div v-for="group in visibleGroups" :key="group.label" class="nav-group">
-          <span class="nav-group__label">{{ group.label }}</span>
+        <div v-for="group in visibleGroups" :key="group.labelKey" class="nav-group">
+          <span class="nav-group__label">{{ t(group.labelKey) }}</span>
           <RouterLink
             v-for="item in group.items"
             :key="item.to"
@@ -78,10 +72,10 @@ async function logout() {
             class="nav-item"
             active-class="active"
             exact-active-class="active"
-            v-tooltip.right="item.hint"
+            v-tooltip.right="item.hintKey ? t(item.hintKey) : undefined"
           >
             <i :class="item.icon" />
-            <span>{{ item.label }}</span>
+            <span>{{ t(item.labelKey) }}</span>
           </RouterLink>
         </div>
       </nav>
@@ -96,7 +90,7 @@ async function logout() {
         </div>
         <Button
           class="logout-btn"
-          label="Abmelden"
+          :label="t('common.logout')"
           icon="pi pi-sign-out"
           severity="secondary"
           text

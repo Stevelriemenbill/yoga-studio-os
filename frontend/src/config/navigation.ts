@@ -1,17 +1,19 @@
 import type { UserRole } from '@/types'
 
 export interface NavItem {
-  label: string
+  /** i18n key for the label, e.g. `nav.dashboard`. */
+  labelKey: string
   icon: string
   to: string
   /** Roles allowed to see this item. Empty = everyone authenticated. */
   roles?: UserRole[]
-  /** Short helper text shown as tooltip / description. */
-  hint?: string
+  /** i18n key for the tooltip / description. */
+  hintKey?: string
 }
 
 export interface NavGroup {
-  label: string
+  /** i18n key for the group label, e.g. `nav.groups.studio`. */
+  labelKey: string
   items: NavItem[]
 }
 
@@ -21,42 +23,45 @@ const FRONT_DESK: UserRole[] = ['studio_admin', 'studio_manager', 'reception']
 
 /**
  * Navigation grouped by the jobs users come to do, not by feature.
- * - Studio: at-a-glance overview
- * - Betrieb: the daily front-desk / teaching workflow
- * - Community: people & their journeys
- * - Begleitung: caring for students & strengthening the teacher-student bond
+ * Labels/hints are i18n keys resolved at render time.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Studio',
+    labelKey: 'nav.groups.studio',
     items: [
-      { label: 'Dashboard', icon: 'pi pi-home', to: '/', hint: 'Überblick & Live-Aktivität' },
+      { labelKey: 'nav.dashboard', icon: 'pi pi-home', to: '/', hintKey: 'nav.hints.dashboard' },
     ],
   },
   {
-    label: 'Betrieb',
+    labelKey: 'nav.groups.operations',
     items: [
-      { label: 'Stundenplan', icon: 'pi pi-calendar', to: '/courses', roles: STAFF, hint: 'Kurse planen' },
-      { label: 'Buchungen', icon: 'pi pi-ticket', to: '/bookings', roles: STAFF, hint: 'Teilnehmer verwalten' },
-      { label: 'Check-in', icon: 'pi pi-qrcode', to: '/checkin', roles: STAFF, hint: 'Anwesenheit erfassen' },
-      { label: 'Events', icon: 'pi pi-star', to: '/events', roles: STAFF, hint: 'Workshops & Retreats' },
+      { labelKey: 'nav.schedule', icon: 'pi pi-calendar', to: '/courses', roles: STAFF, hintKey: 'nav.hints.schedule' },
+      { labelKey: 'nav.bookings', icon: 'pi pi-ticket', to: '/bookings', roles: STAFF, hintKey: 'nav.hints.bookings' },
+      { labelKey: 'nav.checkin', icon: 'pi pi-qrcode', to: '/checkin', roles: STAFF, hintKey: 'nav.hints.checkin' },
+      { labelKey: 'nav.events', icon: 'pi pi-star', to: '/events', roles: STAFF, hintKey: 'nav.hints.events' },
     ],
   },
   {
-    label: 'Community',
+    labelKey: 'nav.groups.community',
     items: [
-      { label: 'Mitglieder', icon: 'pi pi-users', to: '/members', roles: FRONT_DESK, hint: 'Kartei & Guthaben' },
-      { label: 'Ausbildung', icon: 'pi pi-graduation-cap', to: '/training', roles: STAFF, hint: 'Trainees begleiten' },
+      { labelKey: 'nav.members', icon: 'pi pi-users', to: '/members', roles: FRONT_DESK, hintKey: 'nav.hints.members' },
+      { labelKey: 'nav.training', icon: 'pi pi-graduation-cap', to: '/training', roles: STAFF, hintKey: 'nav.hints.training' },
     ],
   },
   {
-    label: 'Begleitung',
+    labelKey: 'nav.groups.guidance',
     items: [
-      { label: 'Fürsorge', icon: 'pi pi-heart', to: '/care', roles: STAFF, hint: 'Wer braucht gerade Aufmerksamkeit' },
-      { label: 'Begleiter:in', icon: 'pi pi-sparkles', to: '/assistant', roles: STAFF, hint: 'Fragen zur Begleitung deiner Schüler:innen' },
-      { label: 'Gemeinschaft', icon: 'pi pi-chart-line', to: '/analytics', roles: MANAGERS, hint: 'Sanfter Puls der Gemeinschaft' },
-      { label: 'Automatisierung', icon: 'pi pi-bolt', to: '/automations', roles: MANAGERS, hint: 'Regeln & Trigger' },
-      { label: 'Benachrichtigungen', icon: 'pi pi-bell', to: '/notifications', roles: STAFF, hint: 'Nachrichten & Verlauf' },
+      { labelKey: 'nav.care', icon: 'pi pi-heart', to: '/care', roles: STAFF, hintKey: 'nav.hints.care' },
+      { labelKey: 'nav.assistant', icon: 'pi pi-sparkles', to: '/assistant', roles: STAFF, hintKey: 'nav.hints.assistant' },
+      { labelKey: 'nav.community', icon: 'pi pi-chart-line', to: '/analytics', roles: MANAGERS, hintKey: 'nav.hints.community' },
+      { labelKey: 'nav.automations', icon: 'pi pi-bolt', to: '/automations', roles: MANAGERS, hintKey: 'nav.hints.automations' },
+      { labelKey: 'nav.notifications', icon: 'pi pi-bell', to: '/notifications', roles: STAFF, hintKey: 'nav.hints.notifications' },
+    ],
+  },
+  {
+    labelKey: 'nav.groups.account',
+    items: [
+      { labelKey: 'nav.settings', icon: 'pi pi-cog', to: '/settings', hintKey: 'nav.hints.settings' },
     ],
   },
 ]
@@ -70,4 +75,9 @@ export function canAccess(item: Pick<NavItem, 'roles'>, role: UserRole | undefin
 /** Flat map of path -> allowed roles, used by the router guard. */
 export const ROUTE_ROLES: Record<string, UserRole[] | undefined> = Object.fromEntries(
   NAV_GROUPS.flatMap((g) => g.items).map((i) => [i.to, i.roles]),
+)
+
+/** Flat map of path -> i18n label key, used for page titles. */
+export const ROUTE_TITLE_KEYS: Record<string, string> = Object.fromEntries(
+  NAV_GROUPS.flatMap((g) => g.items).map((i) => [i.to, i.labelKey]),
 )
