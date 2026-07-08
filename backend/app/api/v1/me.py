@@ -22,12 +22,19 @@ from app.models.member import Member
 from app.models.session import CourseSession
 from app.schemas.booking import BookingRead
 from app.schemas.checkin import MemberPassRead
+from app.schemas.event import EventRead, EventRegistrationRead
 from app.schemas.member import MemberRead
 from app.services import booking as booking_service
+from app.services import event as event_service
 from app.services import integrations as integrations_service
 from app.services import waitlist as waitlist_service
 from app.services.booking import BookingError, BookingRepository
 from app.services.checkin import member_qr_token
+from app.services.event import (
+    EventError,
+    EventRegistrationRepository,
+    EventRepository,
+)
 
 router = APIRouter(prefix="/me", tags=["member self-service"])
 
@@ -138,3 +145,63 @@ async def my_pass(
         token=token,
         qr_payload=f"studioos://checkin?token={token}",
     )
+
+
+@router.get("/events", response_model=list[EventRead])
+async def my_events(
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Published events the current member can register for."""
+    return await EventRepository(db, member.tenant_id).list_published()
+
+
+@router.get("/events/registrations", response_model=list[EventRegistrationRead])
+async def my_event_registrations(
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """The current member's own event registrations."""
+    return await EventRegistrationRepository(db, member.tenant_id).for_member(
+        member.id
+    )
+
+
+@router.post(
+    "/events/{event_id}/register",
+    response_model=EventRegistrationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_for_event(
+    event_id: uuid.UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Register the current member for a published event (member id derived)."""
+    event = await EventRepository(db, member.tenant_id).get(event_id)
+    if event is None or not event.is_published:
+        raise HTTPException(status_code=404, detail="Event not found")
+    try:
+        return await event_service.register(db, member.tenant_id, event, member)
+    except EventError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/events/registrations/{registration_id}/cancel",
+    response_model=EventRegistrationRead,
+)
+async def cancel_my_event_registration(
+    registration_id: uuid.UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel one of the current member's own event registrations.
+
+    Ownership is enforced: 404 if the registration is not the member's own.
+    """
+    repo = EventRegistrationRepository(db, member.tenant_id)
+    reg = await repo.get(registration_id)
+    if reg is None or reg.member_id != member.id:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    return await event_service.cancel_registration(db, member.tenant_id, reg)

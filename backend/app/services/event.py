@@ -19,6 +19,14 @@ class EventError(Exception):
 class EventRepository(TenantRepository[Event]):
     model = Event
 
+    async def list_published(self) -> list[Event]:
+        result = await self.db.execute(
+            self._base_query()
+            .where(Event.is_published.is_(True))
+            .order_by(Event.starts_at.asc())
+        )
+        return list(result.scalars().all())
+
 
 class EventRegistrationRepository(TenantRepository[EventRegistration]):
     model = EventRegistration
@@ -26,6 +34,14 @@ class EventRegistrationRepository(TenantRepository[EventRegistration]):
     async def for_event(self, event_id: uuid.UUID) -> list[EventRegistration]:
         result = await self.db.execute(
             self._base_query().where(EventRegistration.event_id == event_id)
+        )
+        return list(result.scalars().all())
+
+    async def for_member(self, member_id: uuid.UUID) -> list[EventRegistration]:
+        result = await self.db.execute(
+            self._base_query()
+            .where(EventRegistration.member_id == member_id)
+            .order_by(EventRegistration.created_at.desc())
         )
         return list(result.scalars().all())
 

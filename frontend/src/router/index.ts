@@ -104,6 +104,11 @@ const router = createRouter({
           component: () => import('@/views/member/MyScheduleView.vue'),
         },
         {
+          path: 'me/events',
+          name: 'my-events',
+          component: () => import('@/views/member/MyEventsView.vue'),
+        },
+        {
           path: 'me/bookings',
           name: 'my-bookings',
           component: () => import('@/views/member/MyBookingsView.vue'),

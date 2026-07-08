@@ -153,3 +153,86 @@ async def test_staff_without_member_profile_gets_404(client):
 async def test_me_requires_auth(client):
     resp = await client.get("/api/v1/me/bookings")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_member_sees_and_registers_for_published_events(client):
+    staff = await _staff_headers(client)
+    _, member_headers = await _member_login(client, staff)
+
+    now = datetime.now(UTC).replace(microsecond=0)
+    # A published and an unpublished event.
+    published = (
+        await client.post(
+            "/api/v1/events",
+            json={
+                "name": "Vinyasa Workshop",
+                "starts_at": now.isoformat(),
+                "ends_at": now.isoformat(),
+                "capacity": 10,
+                "is_published": True,
+            },
+            headers=staff,
+        )
+    ).json()
+    await client.post(
+        "/api/v1/events",
+        json={
+            "name": "Draft Retreat",
+            "starts_at": now.isoformat(),
+            "ends_at": now.isoformat(),
+            "is_published": False,
+        },
+        headers=staff,
+    )
+
+    # Member only sees the published one.
+    listing = await client.get("/api/v1/me/events", headers=member_headers)
+    assert listing.status_code == 200, listing.text
+    names = [e["name"] for e in listing.json()]
+    assert names == ["Vinyasa Workshop"]
+
+    # Member registers themselves.
+    reg = await client.post(
+        f"/api/v1/me/events/{published['id']}/register", headers=member_headers
+    )
+    assert reg.status_code == 201, reg.text
+    assert reg.json()["status"] == "confirmed"
+    registration_id = reg.json()["id"]
+
+    mine = await client.get(
+        "/api/v1/me/events/registrations", headers=member_headers
+    )
+    assert mine.status_code == 200
+    assert len(mine.json()) == 1
+
+    # Member cancels their own registration.
+    cancel = await client.post(
+        f"/api/v1/me/events/registrations/{registration_id}/cancel",
+        headers=member_headers,
+    )
+    assert cancel.status_code == 200, cancel.text
+    assert cancel.json()["status"] == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_member_cannot_register_for_unpublished_event(client):
+    staff = await _staff_headers(client)
+    _, member_headers = await _member_login(client, staff)
+    now = datetime.now(UTC).replace(microsecond=0)
+    draft = (
+        await client.post(
+            "/api/v1/events",
+            json={
+                "name": "Secret",
+                "starts_at": now.isoformat(),
+                "ends_at": now.isoformat(),
+                "is_published": False,
+            },
+            headers=staff,
+        )
+    ).json()
+    resp = await client.post(
+        f"/api/v1/me/events/{draft['id']}/register", headers=member_headers
+    )
+    assert resp.status_code == 404
