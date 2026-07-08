@@ -274,9 +274,30 @@ export default {
     },
     actions: {
       session: 'Session',
+      series: 'Series',
       cancel: 'Cancel',
       save: 'Save',
       create: 'Create',
+    },
+    weekdays: {
+      mon: 'Mon',
+      tue: 'Tue',
+      wed: 'Wed',
+      thu: 'Thu',
+      fri: 'Fri',
+      sat: 'Sat',
+      sun: 'Sun',
+    },
+    series: {
+      title: 'Schedule a series',
+      weekdays: 'Weekdays',
+      time: 'Time',
+      startDate: 'Start date',
+      end: 'End',
+      endByDate: 'By date',
+      endByCount: 'Number of sessions',
+      generate: 'Create series',
+      created: '{count} sessions created.',
     },
     form: {
       name: 'Name',
@@ -291,6 +312,7 @@ export default {
       loadCourses: 'Courses could not be loaded.',
       saveCourse: 'Course could not be saved.',
       saveSession: 'Session could not be created.',
+      saveSeries: 'Series could not be created.',
     },
   },
   bookings: {

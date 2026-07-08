@@ -75,6 +75,32 @@ export async function createSession(
   return data
 }
 
+// --- Recurring schedule ---
+export interface RecurrencePayload {
+  course_id: string
+  /** Weekdays: 0=Mon .. 6=Sun. */
+  weekdays: number[]
+  /** "HH:MM:SS" local time. */
+  start_time: string
+  /** "YYYY-MM-DD". */
+  start_date: string
+  /** Provide exactly one of end_date or count. */
+  end_date?: string
+  count?: number
+}
+
+/** Generate many sessions for a course from a weekly recurrence. */
+export async function scheduleRecurring(
+  courseId: string,
+  payload: RecurrencePayload,
+): Promise<CourseSession[]> {
+  const { data } = await api.post<CourseSession[]>(
+    `/courses/${courseId}/schedule`,
+    payload,
+  )
+  return data
+}
+
 /** List sessions (with booking stats) in an optional date range. */
 export async function listSessions(params?: {
   start?: string

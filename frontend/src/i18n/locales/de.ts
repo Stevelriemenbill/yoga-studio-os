@@ -274,9 +274,30 @@ export default {
     },
     actions: {
       session: 'Termin',
+      series: 'Serie',
       cancel: 'Abbrechen',
       save: 'Speichern',
       create: 'Erstellen',
+    },
+    weekdays: {
+      mon: 'Mo',
+      tue: 'Di',
+      wed: 'Mi',
+      thu: 'Do',
+      fri: 'Fr',
+      sat: 'Sa',
+      sun: 'So',
+    },
+    series: {
+      title: 'Terminserie planen',
+      weekdays: 'Wochentage',
+      time: 'Uhrzeit',
+      startDate: 'Startdatum',
+      end: 'Ende',
+      endByDate: 'Bis Datum',
+      endByCount: 'Anzahl Termine',
+      generate: 'Serie erstellen',
+      created: '{count} Termine erstellt.',
     },
     form: {
       name: 'Name',
@@ -291,6 +312,7 @@ export default {
       loadCourses: 'Kurse konnten nicht geladen werden.',
       saveCourse: 'Kurs konnte nicht gespeichert werden.',
       saveSession: 'Termin konnte nicht erstellt werden.',
+      saveSeries: 'Serie konnte nicht erstellt werden.',
     },
   },
   bookings: {

@@ -7,6 +7,7 @@ from app.db.repository import TenantRepository
 from app.models.course import Course, Room
 from app.models.session import CourseSession, SessionStatus
 from app.schemas.course import (
+    MAX_RECURRENCE_SESSIONS,
     CourseCreate,
     CourseUpdate,
     RecurrenceSchedule,
@@ -115,9 +116,12 @@ async def schedule_recurring(
         start_time=data.start_time,
         start_date=data.start_date,
         end_date=data.end_date,
+        count=data.count,
         exceptions=set(data.exceptions),
     )
     starts = expand_recurrence(rule)
+    # Bound total work regardless of which end condition is used.
+    starts = starts[:MAX_RECURRENCE_SESSIONS]
     repo = SessionRepository(db, tenant_id)
 
     # Avoid duplicates: fetch existing start times for this course.

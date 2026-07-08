@@ -82,6 +82,75 @@ async def test_recurring_schedule_generates_sessions(client):
 
 
 @pytest.mark.asyncio
+async def test_recurring_schedule_by_count(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/schedule",
+        json={
+            "course_id": course["id"],
+            "weekdays": [0, 2, 4],  # Mon, Wed, Fri
+            "start_time": "09:00:00",
+            "start_date": "2030-01-07",  # a Monday
+            "count": 5,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    assert len(resp.json()) == 5
+
+
+@pytest.mark.asyncio
+async def test_recurring_schedule_requires_exactly_one_end(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    # Neither end_date nor count -> 422
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/schedule",
+        json={
+            "course_id": course["id"],
+            "weekdays": [0],
+            "start_time": "18:00:00",
+            "start_date": "2030-01-07",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 422
+    # Both end_date and count -> 422
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/schedule",
+        json={
+            "course_id": course["id"],
+            "weekdays": [0],
+            "start_time": "18:00:00",
+            "start_date": "2030-01-07",
+            "end_date": "2030-02-07",
+            "count": 3,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_recurring_schedule_rejects_invalid_weekday(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/schedule",
+        json={
+            "course_id": course["id"],
+            "weekdays": [7],  # invalid
+            "start_time": "18:00:00",
+            "start_date": "2030-01-07",
+            "count": 3,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_booking_fills_capacity_then_full(client):
     headers = await _auth_headers(client)
     course = await _make_course(client, headers, max_participants=1)

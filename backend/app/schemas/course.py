@@ -1,10 +1,14 @@
 import uuid
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.course import CourseLevel
 from app.models.session import SessionStatus
+
+#: Hard cap on how many sessions a single recurrence request may create,
+#: to guard against runaway schedules.
+MAX_RECURRENCE_SESSIONS = 200
 
 
 # --- Room ---
@@ -80,14 +84,36 @@ class SessionCreate(BaseModel):
 
 
 class RecurrenceSchedule(BaseModel):
-    """Generate multiple sessions for a course via weekly recurrence."""
+    """Generate multiple sessions for a course via weekly recurrence.
+
+    The series ends either on ``end_date`` (inclusive) OR after ``count``
+    occurrences — exactly one of the two must be provided.
+    """
 
     course_id: uuid.UUID
+    #: Weekdays to schedule on, 0=Monday .. 6=Sunday.
     weekdays: list[int] = Field(min_length=1)
     start_time: time
     start_date: date
-    end_date: date
+    end_date: date | None = None
+    #: Number of occurrences to generate (alternative to ``end_date``).
+    count: int | None = Field(default=None, ge=1, le=MAX_RECURRENCE_SESSIONS)
     exceptions: list[date] = Field(default_factory=list)
+
+    @field_validator("weekdays")
+    @classmethod
+    def _validate_weekdays(cls, v: list[int]) -> list[int]:
+        if any(d < 0 or d > 6 for d in v):
+            raise ValueError("weekdays must be between 0 (Mon) and 6 (Sun)")
+        return sorted(set(v))
+
+    @model_validator(mode="after")
+    def _validate_end(self) -> "RecurrenceSchedule":
+        if (self.end_date is None) == (self.count is None):
+            raise ValueError("provide exactly one of end_date or count")
+        if self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("end_date must not be before start_date")
+        return self
 
 
 class SessionUpdate(BaseModel):
