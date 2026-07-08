@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Course, CourseSession, Room } from '@/types'
+import type { Course, CourseSession, Room, SessionWithStats } from '@/types'
 
 // --- Rooms ---
 export async function listRooms(): Promise<Room[]> {
@@ -72,5 +72,14 @@ export async function createSession(
     `/courses/${courseId}/sessions`,
     payload,
   )
+  return data
+}
+
+/** List sessions (with booking stats) in an optional date range. */
+export async function listSessions(params?: {
+  start?: string
+  end?: string
+}): Promise<SessionWithStats[]> {
+  const { data } = await api.get<SessionWithStats[]>('/sessions', { params })
   return data
 }

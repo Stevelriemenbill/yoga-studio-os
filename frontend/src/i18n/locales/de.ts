@@ -274,8 +274,9 @@ export default {
   },
   bookings: {
     title: 'Buchungen',
-    loadSession: 'Session laden',
+    loadSession: 'Termin auswählen',
     sessionIdPlaceholder: 'Session-ID',
+    selectSession: 'Termin wählen',
     loadBookings: 'Buchungen laden',
     newBooking: 'Neue Buchung',
     selectMember: 'Mitglied wählen',

@@ -4,7 +4,6 @@ import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
@@ -19,12 +18,15 @@ import {
   declineOffer,
 } from '@/api/bookings'
 import { listMembers } from '@/api/members'
-import type { Booking, WaitlistEntry, Member } from '@/types'
+import { listSessions, listCourses } from '@/api/courses'
+import type { Booking, WaitlistEntry, Member, Course, SessionWithStats } from '@/types'
 
 const { t, locale } = useI18n()
 
 const sessionId = ref('')
 const members = ref<Member[]>([])
+const sessions = ref<SessionWithStats[]>([])
+const courses = ref<Course[]>([])
 const bookings = ref<Booking[]>([])
 const waitlist = ref<WaitlistEntry[]>([])
 const loading = ref(false)
@@ -42,13 +44,43 @@ const memberOptions = computed(() =>
   })),
 )
 
+const courseName = computed(() => {
+  const map = new Map(courses.value.map((c) => [c.id, c.name]))
+  return (id: string) => map.get(id) ?? '—'
+})
+
+const memberName = computed(() => {
+  const map = new Map(members.value.map((m) => [m.id, `${m.first_name} ${m.last_name}`]))
+  return (id: string) => map.get(id) ?? id
+})
+
+const sessionOptions = computed(() =>
+  [...sessions.value]
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .map((s) => ({
+      label: `${courseName.value(s.course_id)} · ${fmtDateTime(s.starts_at)} (${s.booked_count}/${s.capacity})`,
+      value: s.id,
+    })),
+)
+
 function fmtDateTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US') : '—'
 }
 
-async function loadMembers() {
+async function loadInitial() {
   try {
-    members.value = await listMembers()
+    const start = new Date()
+    start.setDate(start.getDate() - 7)
+    const end = new Date()
+    end.setDate(end.getDate() + 30)
+    const [mem, crs, sess] = await Promise.all([
+      listMembers(),
+      listCourses(),
+      listSessions({ start: start.toISOString(), end: end.toISOString() }),
+    ])
+    members.value = mem
+    courses.value = crs
+    sessions.value = sess
   } catch {
     error.value = t('bookings.errors.loadMembers')
   }
@@ -114,7 +146,7 @@ async function doDecline(w: WaitlistEntry) {
   }
 }
 
-onMounted(loadMembers)
+onMounted(loadInitial)
 </script>
 
 <template>
@@ -127,7 +159,16 @@ onMounted(loadMembers)
       <template #title>{{ t('bookings.loadSession') }}</template>
       <template #content>
         <div class="row">
-          <InputText v-model="sessionId" :placeholder="t('bookings.sessionIdPlaceholder')" />
+          <Dropdown
+            v-model="sessionId"
+            :options="sessionOptions"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('bookings.selectSession')"
+            filter
+            class="session-select"
+            @change="loadSession"
+          />
           <Button :label="t('bookings.loadBookings')" :loading="loading" @click="loadSession" />
         </div>
       </template>
@@ -160,7 +201,9 @@ onMounted(loadMembers)
 
     <h2>{{ t('bookings.bookingsHeading') }}</h2>
     <DataTable :value="bookings" dataKey="id" responsiveLayout="scroll">
-      <Column field="member_id" :header="t('bookings.columns.member')" />
+      <Column :header="t('bookings.columns.member')">
+        <template #body="{ data }">{{ memberName(data.member_id) }}</template>
+      </Column>
       <Column :header="t('bookings.columns.status')">
         <template #body="{ data }"><Tag :value="data.status" /></template>
       </Column>
@@ -183,7 +226,9 @@ onMounted(loadMembers)
 
     <h2>{{ t('bookings.waitlistHeading') }}</h2>
     <DataTable :value="waitlist" dataKey="id" responsiveLayout="scroll">
-      <Column field="member_id" :header="t('bookings.columns.member')" />
+      <Column :header="t('bookings.columns.member')">
+        <template #body="{ data }">{{ memberName(data.member_id) }}</template>
+      </Column>
       <Column :header="t('bookings.columns.status')">
         <template #body="{ data }"><Tag :value="data.status" /></template>
       </Column>

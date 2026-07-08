@@ -274,8 +274,9 @@ export default {
   },
   bookings: {
     title: 'Bookings',
-    loadSession: 'Load Session',
+    loadSession: 'Select session',
     sessionIdPlaceholder: 'Session ID',
+    selectSession: 'Select session',
     loadBookings: 'Load Bookings',
     newBooking: 'New Booking',
     selectMember: 'Select member',
