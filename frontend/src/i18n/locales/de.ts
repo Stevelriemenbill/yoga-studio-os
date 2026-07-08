@@ -235,6 +235,22 @@ export default {
     joinOnline: 'Online teilnehmen',
     week: 'Woche',
     month: 'Monat',
+    edit: {
+      action: 'Bearbeiten',
+      title: 'Stunde bearbeiten',
+      scope: 'Änderungen gelten nur für diese Stunde ({course}).',
+      dateTime: 'Datum & Uhrzeit',
+      updated: 'Stunde aktualisiert.',
+      updateError: 'Stunde konnte nicht aktualisiert werden.',
+    },
+    cancelDialog: {
+      title: 'Stunde absagen',
+      hint: 'Diese Stunde ({course}) absagen? Alle Buchungen werden storniert und die Teilnehmer benachrichtigt.',
+      reason: 'Grund (optional)',
+      reasonPlaceholder: 'z. B. Krankheit der Lehrkraft',
+      keep: 'Nicht absagen',
+      confirm: 'Stunde absagen',
+    },
     series: {
       manage: 'Serie',
       title: 'Terminserie bearbeiten',

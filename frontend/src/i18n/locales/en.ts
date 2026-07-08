@@ -235,6 +235,22 @@ export default {
     joinOnline: 'Join online',
     week: 'Week',
     month: 'Month',
+    edit: {
+      action: 'Edit',
+      title: 'Edit session',
+      scope: 'Changes apply only to this session ({course}).',
+      dateTime: 'Date & time',
+      updated: 'Session updated.',
+      updateError: 'Could not update the session.',
+    },
+    cancelDialog: {
+      title: 'Cancel session',
+      hint: 'Cancel this session ({course})? All bookings will be cancelled and members notified.',
+      reason: 'Reason (optional)',
+      reasonPlaceholder: 'e.g. teacher unavailable',
+      keep: 'Keep session',
+      confirm: 'Cancel session',
+    },
     series: {
       manage: 'Series',
       title: 'Edit recurring series',

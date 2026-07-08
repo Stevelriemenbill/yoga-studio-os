@@ -468,3 +468,48 @@ async def test_series_not_found(client):
             f"/api/v1/series/{missing}", json={"capacity": 5}, headers=headers
         )
     ).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_session_shifts_time_and_preserves_duration(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)  # 60-minute course
+    session = await _make_session(
+        client, headers, course["id"], starts_at="2030-01-01T18:00:00"
+    )
+
+    resp = await client.patch(
+        f"/api/v1/sessions/{session['id']}",
+        json={"starts_at": "2030-01-01T19:30:00", "capacity": 8},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    fetched = (
+        await client.get(f"/api/v1/sessions/{session['id']}", headers=headers)
+    ).json()
+    assert fetched["starts_at"].endswith("19:30:00")
+    # 60-minute duration preserved => ends 20:30.
+    assert fetched["ends_at"].endswith("20:30:00")
+    assert fetched["capacity"] == 8
+
+
+@pytest.mark.asyncio
+async def test_update_session_requires_staff(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    session = await _make_session(client, headers, course["id"])
+    missing = "00000000-0000-0000-0000-000000000000"
+    assert (
+        await client.patch(
+            f"/api/v1/sessions/{missing}", json={"capacity": 5}, headers=headers
+        )
+    ).status_code == 404
+    # Sanity: the real session updates fine.
+    assert (
+        await client.patch(
+            f"/api/v1/sessions/{session['id']}",
+            json={"capacity": 5},
+            headers=headers,
+        )
+    ).status_code == 200

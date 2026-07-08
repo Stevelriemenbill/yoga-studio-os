@@ -180,7 +180,13 @@ async def schedule_recurring(
 async def update_session(
     db: AsyncSession, session: CourseSession, data: SessionUpdate
 ) -> CourseSession:
-    for field, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    # Preserve the session duration when the start time changes.
+    new_start = changes.get("starts_at")
+    if new_start is not None:
+        duration = session.ends_at - session.starts_at
+        session.ends_at = new_start + duration
+    for field, value in changes.items():
         setattr(session, field, value)
     await db.commit()
     await db.refresh(session)

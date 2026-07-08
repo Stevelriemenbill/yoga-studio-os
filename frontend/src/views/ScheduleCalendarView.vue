@@ -11,7 +11,7 @@ import DatePicker from 'primevue/datepicker'
 import Checkbox from 'primevue/checkbox'
 
 import { listSchedule, listCourses, bookSession, myBookings } from '@/api/me'
-import { cancelSession, updateSeries, cancelSeries } from '@/api/courses'
+import { cancelSession, updateSession, updateSeries, cancelSeries } from '@/api/courses'
 import { useAuthStore } from '@/stores/auth'
 import type { Booking, Course, SessionWithStats } from '@/types'
 
@@ -234,17 +234,95 @@ function isBooked(id: string): boolean {
   return bookedSessionIds.value.has(id)
 }
 
-async function cancel(session: SessionWithStats) {
-  const reason = window.prompt(t('calendar.cancelPrompt'))
-  if (reason === null) return
+// --- Single session cancel (PrimeVue dialog) ---
+const showCancelDialog = ref(false)
+const cancelling = ref(false)
+const cancelReason = ref('')
+const cancelTarget = ref<SessionWithStats | null>(null)
+
+function openCancelDialog(session: SessionWithStats) {
+  cancelTarget.value = session
+  cancelReason.value = ''
+  showCancelDialog.value = true
+}
+
+async function confirmCancel() {
+  const session = cancelTarget.value
+  if (!session) return
+  cancelling.value = true
   error.value = ''
   info.value = ''
   try {
-    await cancelSession(session.id, reason.trim() || undefined)
+    await cancelSession(session.id, cancelReason.value.trim() || undefined)
     sessions.value = sessions.value.filter((s) => s.id !== session.id)
     info.value = t('calendar.cancelSuccess')
+    showCancelDialog.value = false
   } catch {
     error.value = t('calendar.cancelError')
+  } finally {
+    cancelling.value = false
+  }
+}
+
+// --- Single session edit (PrimeVue dialog) ---
+const showEditDialog = ref(false)
+const savingSession = ref(false)
+const editTarget = ref<SessionWithStats | null>(null)
+const editCourseName = ref('')
+const editForm = ref<{
+  date: Date | null
+  capacity: number | null
+  overrideLocation: boolean
+  is_online: boolean
+  location: string
+  online_url: string
+}>({
+  date: null,
+  capacity: null,
+  overrideLocation: false,
+  is_online: false,
+  location: '',
+  online_url: '',
+})
+
+function openEditDialog(s: SessionWithStats) {
+  editTarget.value = s
+  editCourseName.value = courseName.value(s.course_id)
+  editForm.value = {
+    date: new Date(s.starts_at),
+    capacity: s.capacity,
+    overrideLocation: false,
+    is_online: !!s.effective_is_online,
+    location: s.effective_location ?? '',
+    online_url: s.effective_online_url ?? '',
+  }
+  showEditDialog.value = true
+}
+
+async function saveSession() {
+  const target = editTarget.value
+  if (!target) return
+  savingSession.value = true
+  error.value = ''
+  info.value = ''
+  try {
+    const f = editForm.value
+    const payload: Record<string, unknown> = {}
+    if (f.date) payload.starts_at = f.date.toISOString()
+    if (f.capacity != null) payload.capacity = f.capacity
+    if (f.overrideLocation) {
+      payload.is_online = f.is_online
+      payload.location = f.is_online ? null : f.location || null
+      payload.online_url = f.is_online ? f.online_url || null : null
+    }
+    await updateSession(target.id, payload)
+    showEditDialog.value = false
+    info.value = t('calendar.edit.updated')
+    await load()
+  } catch {
+    error.value = t('calendar.edit.updateError')
+  } finally {
+    savingSession.value = false
   }
 }
 
@@ -316,16 +394,25 @@ async function saveSeries() {
   }
 }
 
+const showSeriesCancelConfirm = ref(false)
+const seriesCancelReason = ref('')
+
+function askCancelSeries() {
+  seriesCancelReason.value = ''
+  showSeriesCancelConfirm.value = true
+}
+
 async function deleteSeries() {
   if (!seriesId.value) return
-  if (!window.confirm(t('calendar.series.cancelConfirm'))) return
-  const reason = window.prompt(t('calendar.cancelPrompt'))
-  if (reason === null) return
   savingSeries.value = true
   error.value = ''
   info.value = ''
   try {
-    const res = await cancelSeries(seriesId.value, reason.trim() || undefined)
+    const res = await cancelSeries(
+      seriesId.value,
+      seriesCancelReason.value.trim() || undefined,
+    )
+    showSeriesCancelConfirm.value = false
     showSeriesDialog.value = false
     info.value = t('calendar.series.cancelled', { count: res.affected })
     await load()
@@ -437,12 +524,20 @@ onMounted(load)
             <div class="slot-actions" v-if="!isPast(s)">
               <Button
                 class="cancel-btn"
+                :label="t('calendar.edit.action')"
+                icon="pi pi-pencil"
+                size="small"
+                text
+                @click="openEditDialog(s)"
+              />
+              <Button
+                class="cancel-btn"
                 :label="t('calendar.cancel')"
                 icon="pi pi-times"
                 size="small"
                 severity="danger"
                 text
-                @click="cancel(s)"
+                @click="openCancelDialog(s)"
               />
               <Button
                 v-if="s.series_id"
@@ -458,6 +553,85 @@ onMounted(load)
         </div>
       </div>
     </div>
+
+    <!-- Edit a single session -->
+    <Dialog
+      v-model:visible="showEditDialog"
+      :header="t('calendar.edit.title')"
+      modal
+      :style="{ width: '440px' }"
+    >
+      <div class="form">
+        <p class="series-hint">
+          {{ t('calendar.edit.scope', { course: editCourseName }) }}
+        </p>
+
+        <label>{{ t('calendar.edit.dateTime') }}</label>
+        <DatePicker
+          v-model="editForm.date"
+          showTime
+          hourFormat="24"
+          dateFormat="dd.mm.yy"
+        />
+
+        <label>{{ t('calendar.series.capacity') }}</label>
+        <InputNumber v-model="editForm.capacity" :min="1" showButtons />
+
+        <div class="checkbox-row">
+          <Checkbox v-model="editForm.overrideLocation" inputId="eoverride" binary />
+          <label for="eoverride" class="checkbox-label">
+            {{ t('calendar.series.changeLocation') }}
+          </label>
+        </div>
+        <template v-if="editForm.overrideLocation">
+          <div class="checkbox-row">
+            <Checkbox v-model="editForm.is_online" inputId="eonline" binary />
+            <label for="eonline" class="checkbox-label">{{ t('calendar.series.isOnline') }}</label>
+          </div>
+          <template v-if="editForm.is_online">
+            <label>{{ t('calendar.series.onlineUrl') }}</label>
+            <InputText v-model="editForm.online_url" placeholder="https://…" />
+          </template>
+          <template v-else>
+            <label>{{ t('calendar.series.location') }}</label>
+            <InputText v-model="editForm.location" />
+          </template>
+        </template>
+      </div>
+      <template #footer>
+        <Button :label="t('calendar.series.close')" text @click="showEditDialog = false" />
+        <Button
+          :label="t('calendar.series.save')"
+          :loading="savingSession"
+          @click="saveSession"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Cancel a single session -->
+    <Dialog
+      v-model:visible="showCancelDialog"
+      :header="t('calendar.cancelDialog.title')"
+      modal
+      :style="{ width: '420px' }"
+    >
+      <div class="form">
+        <p class="series-hint">
+          {{ t('calendar.cancelDialog.hint', { course: cancelTarget ? courseName(cancelTarget.course_id) : '' }) }}
+        </p>
+        <label>{{ t('calendar.cancelDialog.reason') }}</label>
+        <InputText v-model="cancelReason" :placeholder="t('calendar.cancelDialog.reasonPlaceholder')" />
+      </div>
+      <template #footer>
+        <Button :label="t('calendar.cancelDialog.keep')" text @click="showCancelDialog = false" />
+        <Button
+          :label="t('calendar.cancelDialog.confirm')"
+          severity="danger"
+          :loading="cancelling"
+          @click="confirmCancel"
+        />
+      </template>
+    </Dialog>
 
     <Dialog
       v-model:visible="showSeriesDialog"
@@ -503,8 +677,8 @@ onMounted(load)
           icon="pi pi-trash"
           severity="danger"
           text
-          :loading="savingSeries"
-          @click="deleteSeries"
+          :disabled="savingSeries"
+          @click="askCancelSeries"
         />
         <span class="footer-spacer" />
         <Button :label="t('calendar.series.close')" text @click="showSeriesDialog = false" />
@@ -512,6 +686,29 @@ onMounted(load)
           :label="t('calendar.series.save')"
           :loading="savingSeries"
           @click="saveSeries"
+        />
+      </template>
+    </Dialog>
+
+    <!-- Confirm cancelling the whole series -->
+    <Dialog
+      v-model:visible="showSeriesCancelConfirm"
+      :header="t('calendar.series.cancelSeries')"
+      modal
+      :style="{ width: '420px' }"
+    >
+      <div class="form">
+        <p class="series-hint">{{ t('calendar.series.cancelConfirm') }}</p>
+        <label>{{ t('calendar.cancelDialog.reason') }}</label>
+        <InputText v-model="seriesCancelReason" :placeholder="t('calendar.cancelDialog.reasonPlaceholder')" />
+      </div>
+      <template #footer>
+        <Button :label="t('calendar.cancelDialog.keep')" text @click="showSeriesCancelConfirm = false" />
+        <Button
+          :label="t('calendar.series.cancelSeries')"
+          severity="danger"
+          :loading="savingSeries"
+          @click="deleteSeries"
         />
       </template>
     </Dialog>

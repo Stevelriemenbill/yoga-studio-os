@@ -166,6 +166,31 @@ export async function cancelSession(
   return data
 }
 
+/** Fields that can be changed on a single session. */
+export interface SessionUpdatePayload {
+  /** Full ISO datetime; replaces the session's start (end shifts by duration). */
+  starts_at?: string
+  teacher_id?: string | null
+  room_id?: string | null
+  capacity?: number | null
+  overbooking_allowance?: number | null
+  location?: string | null
+  is_online?: boolean | null
+  online_url?: string | null
+}
+
+/** Update a single session (staff only). */
+export async function updateSession(
+  sessionId: string,
+  payload: SessionUpdatePayload,
+): Promise<SessionWithStats> {
+  const { data } = await api.patch<SessionWithStats>(
+    `/sessions/${sessionId}`,
+    payload,
+  )
+  return data
+}
+
 // --- Series (recurrence management) ---
 export interface SeriesUpdatePayload {
   /** "HH:MM:SS" local time; shifts the time-of-day of every future session. */
