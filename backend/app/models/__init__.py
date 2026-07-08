@@ -22,6 +22,7 @@ from app.models.integrations import (
 )
 from app.models.join_request import JoinRequest, JoinRequestStatus
 from app.models.member import Member, MembershipType
+from app.models.message import Conversation, Message
 from app.models.notification import (
     Notification,
     NotificationChannel,
@@ -52,6 +53,8 @@ __all__ = [
     "SessionStatus",
     "Member",
     "MembershipType",
+    "Conversation",
+    "Message",
     "Booking",
     "BookingStatus",
     "BookingSource",

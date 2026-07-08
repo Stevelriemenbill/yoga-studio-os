@@ -75,6 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: 'nav.groups.account',
     items: [
+      { labelKey: 'nav.messages', icon: 'pi pi-comments', to: '/messages', hintKey: 'nav.hints.messages' },
       { labelKey: 'nav.settings', icon: 'pi pi-cog', to: '/settings', hintKey: 'nav.hints.settings' },
     ],
   },

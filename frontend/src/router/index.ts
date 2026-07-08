@@ -121,6 +121,11 @@ const router = createRouter({
           component: () => import('@/views/SettingsView.vue'),
         },
         {
+          path: 'messages',
+          name: 'messages',
+          component: () => import('@/views/MessagesView.vue'),
+        },
+        {
           path: 'me/schedule',
           name: 'my-schedule',
           component: () => import('@/views/member/MyScheduleView.vue'),

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 
 import { useAuthStore } from '@/stores/auth'
+import { getUnreadCount } from '@/api/messages'
 import {
   NAV_GROUPS,
   ROUTE_TITLE_KEYS,
@@ -15,6 +16,27 @@ import {
 const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
+
+const unreadMessages = ref(0)
+let unreadTimer: ReturnType<typeof setInterval> | undefined
+
+async function refreshUnread() {
+  if (!auth.isAuthenticated) return
+  try {
+    unreadMessages.value = await getUnreadCount()
+  } catch {
+    /* ignore polling errors */
+  }
+}
+
+onMounted(() => {
+  refreshUnread()
+  unreadTimer = setInterval(refreshUnread, 30000)
+})
+
+onUnmounted(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+})
 
 const roleLabel = computed(() =>
   auth.user ? t(`roles.${auth.user.role}`) : '',
@@ -79,6 +101,11 @@ async function logout() {
           >
             <i :class="item.icon" />
             <span>{{ t(item.labelKey) }}</span>
+            <span
+              v-if="item.to === '/messages' && unreadMessages"
+              class="nav-badge"
+              >{{ unreadMessages }}</span
+            >
           </RouterLink>
         </div>
       </nav>
@@ -204,6 +231,20 @@ async function logout() {
   background: var(--p-primary-color, #10b981);
   color: var(--p-primary-contrast-color, #fff);
   font-weight: 600;
+}
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .sidebar__footer {
   border-top: 1px solid #1e293b;
