@@ -26,6 +26,7 @@ export interface CoursePayload {
   max_participants?: number
   min_participants?: number
   duration_minutes?: number
+  counts_for_training?: boolean
 }
 
 export async function listCourses(): Promise<Course[]> {

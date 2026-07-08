@@ -55,6 +55,12 @@ class Course(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    #: Whether attendance of this course's sessions counts toward
+    #: teacher-training hours (studio-configurable metadata).
+    counts_for_training: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
     room: Mapped["Room | None"] = relationship(lazy="selectin")
     sessions: Mapped[list["CourseSession"]] = relationship(
         back_populates="course",

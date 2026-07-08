@@ -10,6 +10,7 @@ import Tag from 'primevue/tag'
 import Dropdown from 'primevue/dropdown'
 import InputNumber from 'primevue/inputnumber'
 import DatePicker from 'primevue/datepicker'
+import Checkbox from 'primevue/checkbox'
 
 import { listCourses, createCourse, createSession, listRooms, scheduleRecurring } from '@/api/courses'
 import type { Course, Room, CourseLevel } from '@/types'
@@ -36,12 +37,14 @@ const form = ref<{
   level: CourseLevel
   max_participants: number
   duration_minutes: number
+  counts_for_training: boolean
 }>({
   name: '',
   category: '',
   level: 'all',
   max_participants: 12,
   duration_minutes: 60,
+  counts_for_training: false,
 })
 
 const showSessionDialog = ref(false)
@@ -105,6 +108,7 @@ function openCourseDialog() {
     level: 'all',
     max_participants: 12,
     duration_minutes: 60,
+    counts_for_training: false,
   }
   showCourseDialog.value = true
 }
@@ -119,6 +123,7 @@ async function saveCourse() {
       level: form.value.level,
       max_participants: form.value.max_participants,
       duration_minutes: form.value.duration_minutes,
+      counts_for_training: form.value.counts_for_training,
     })
     showCourseDialog.value = false
     await load()
@@ -233,6 +238,16 @@ onMounted(load)
           />
         </template>
       </Column>
+      <Column :header="t('courses.columns.training')">
+        <template #body="{ data }">
+          <Tag
+            v-if="data.counts_for_training"
+            :value="t('courses.status.trainingRelevant')"
+            severity="info"
+          />
+          <span v-else class="muted">—</span>
+        </template>
+      </Column>
       <Column :header="t('courses.columns.actions')">
         <template #body="{ data }">
           <Button
@@ -271,6 +286,11 @@ onMounted(load)
         <InputNumber v-model="form.max_participants" :min="1" />
         <label>{{ t('courses.form.duration') }}</label>
         <InputNumber v-model="form.duration_minutes" :min="1" />
+        <div class="checkbox-row">
+          <Checkbox v-model="form.counts_for_training" inputId="cft" binary />
+          <label for="cft" class="checkbox-label">{{ t('courses.form.countsForTraining') }}</label>
+        </div>
+        <small class="hint">{{ t('courses.form.countsForTrainingHint') }}</small>
       </div>
       <template #footer>
         <Button :label="t('courses.actions.cancel')" text @click="showCourseDialog = false" />
@@ -396,6 +416,22 @@ onMounted(load)
 .form label {
   font-weight: 600;
   margin-top: 0.4rem;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.checkbox-label {
+  font-weight: 600;
+  margin-top: 0;
+}
+.hint {
+  color: #6b7280;
+}
+.muted {
+  color: #94a3b8;
 }
 .weekdays {
   display: flex;

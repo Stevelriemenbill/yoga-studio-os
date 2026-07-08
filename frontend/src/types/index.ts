@@ -99,6 +99,7 @@ export interface Course {
   min_participants: number
   duration_minutes: number
   is_active: boolean
+  counts_for_training: boolean
 }
 
 export type SessionStatus = 'scheduled' | 'cancelled' | 'completed'

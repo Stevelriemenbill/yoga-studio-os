@@ -292,6 +292,7 @@ export default {
     status: {
       active: 'Aktiv',
       inactive: 'Inaktiv',
+      trainingRelevant: 'Ausbildung',
     },
     columns: {
       name: 'Name',
@@ -299,6 +300,7 @@ export default {
       level: 'Level',
       maxParticipants: 'Max. Teilnehmer',
       active: 'Aktiv',
+      training: 'Ausbildung',
       actions: 'Aktionen',
     },
     actions: {
@@ -336,6 +338,9 @@ export default {
       duration: 'Dauer (Minuten)',
       course: 'Kurs',
       startTime: 'Startzeit',
+      countsForTraining: 'Für Ausbildung relevant',
+      countsForTrainingHint:
+        'Teilnahme an diesem Kurs zählt für Ausbildungsstunden.',
     },
     errors: {
       loadCourses: 'Kurse konnten nicht geladen werden.',

@@ -43,6 +43,7 @@ class CourseCreate(BaseModel):
     max_participants: int = Field(default=20, ge=1)
     min_participants: int = Field(default=1, ge=0)
     duration_minutes: int = Field(default=60, ge=1)
+    counts_for_training: bool = False
 
 
 class CourseUpdate(BaseModel):
@@ -56,6 +57,7 @@ class CourseUpdate(BaseModel):
     min_participants: int | None = Field(default=None, ge=0)
     duration_minutes: int | None = Field(default=None, ge=1)
     is_active: bool | None = None
+    counts_for_training: bool | None = None
 
 
 class CourseRead(BaseModel):
@@ -72,6 +74,7 @@ class CourseRead(BaseModel):
     min_participants: int
     duration_minutes: int
     is_active: bool
+    counts_for_training: bool
 
 
 # --- Session ---

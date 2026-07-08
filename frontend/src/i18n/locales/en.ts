@@ -292,6 +292,7 @@ export default {
     status: {
       active: 'Active',
       inactive: 'Inactive',
+      trainingRelevant: 'Training',
     },
     columns: {
       name: 'Name',
@@ -299,6 +300,7 @@ export default {
       level: 'Level',
       maxParticipants: 'Max. Participants',
       active: 'Active',
+      training: 'Training',
       actions: 'Actions',
     },
     actions: {
@@ -336,6 +338,9 @@ export default {
       duration: 'Duration (minutes)',
       course: 'Course',
       startTime: 'Start Time',
+      countsForTraining: 'Relevant for training',
+      countsForTrainingHint:
+        'Attending this course counts toward teacher-training hours.',
     },
     errors: {
       loadCourses: 'Courses could not be loaded.',
