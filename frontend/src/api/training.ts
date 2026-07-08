@@ -31,6 +31,25 @@ export async function checkInManual(payload: {
   return data
 }
 
+// --- Check-in time window (per-studio config) ---
+export interface CheckinWindow {
+  checkin_opens_before: number
+  checkin_closes_after: number
+  checkin_late_threshold: number
+}
+
+export async function getCheckinWindow(): Promise<CheckinWindow> {
+  const { data } = await api.get<CheckinWindow>('/checkin/window')
+  return data
+}
+
+export async function updateCheckinWindow(
+  payload: Partial<CheckinWindow>,
+): Promise<CheckinWindow> {
+  const { data } = await api.patch<CheckinWindow>('/checkin/window', payload)
+  return data
+}
+
 // --- Attendance ---
 export async function setAttendance(
   sessionId: string,

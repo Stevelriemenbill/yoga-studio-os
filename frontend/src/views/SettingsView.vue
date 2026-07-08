@@ -5,9 +5,11 @@ import Card from 'primevue/card'
 import Dropdown from 'primevue/dropdown'
 import Tag from 'primevue/tag'
 import SelectButton from 'primevue/selectbutton'
+import InputNumber from 'primevue/inputnumber'
 
 import { useAuthStore } from '@/stores/auth'
 import { SUPPORTED_LOCALES, setLocale, type AppLocale } from '@/i18n'
+import { getCheckinWindow, updateCheckinWindow } from '@/api/training'
 import {
   SUPPORTED_THEME_PRESETS,
   SUPPORTED_THEME_MODES,
@@ -68,6 +70,44 @@ async function saveTheme() {
     themeError.value = t('settings.themeError')
   }
 }
+
+// --- Check-in window (studio-wide, admin only) ---
+const opensBefore = ref(30)
+const closesAfter = ref(15)
+const lateThreshold = ref(5)
+const windowSaved = ref(false)
+const windowError = ref('')
+
+async function loadWindow() {
+  if (!auth.isAdmin) return
+  try {
+    const w = await getCheckinWindow()
+    opensBefore.value = w.checkin_opens_before
+    closesAfter.value = w.checkin_closes_after
+    lateThreshold.value = w.checkin_late_threshold
+  } catch {
+    windowError.value = t('settings.checkinWindowError')
+  }
+}
+
+async function saveWindow() {
+  windowError.value = ''
+  try {
+    await updateCheckinWindow({
+      checkin_opens_before: opensBefore.value,
+      checkin_closes_after: closesAfter.value,
+      checkin_late_threshold: lateThreshold.value,
+    })
+    windowSaved.value = true
+    window.setTimeout(() => {
+      windowSaved.value = false
+    }, 2500)
+  } catch {
+    windowError.value = t('settings.checkinWindowError')
+  }
+}
+
+loadWindow()
 </script>
 
 <template>
@@ -114,6 +154,34 @@ async function saveTheme() {
           </button>
           <small v-if="themeSaved" class="saved">{{ t('settings.themeSaved') }}</small>
           <small v-if="themeError" class="error">{{ themeError }}</small>
+        </div>
+      </template>
+    </Card>
+
+    <Card v-if="auth.isAdmin" class="block">
+      <template #title>{{ t('settings.checkinWindowSection') }}</template>
+      <template #content>
+        <p class="hint">{{ t('settings.checkinWindowHint') }}</p>
+
+        <div class="field">
+          <label>{{ t('settings.opensBefore') }}</label>
+          <InputNumber v-model="opensBefore" :min="0" :max="720" suffix=" min" showButtons />
+        </div>
+        <div class="field">
+          <label>{{ t('settings.closesAfter') }}</label>
+          <InputNumber v-model="closesAfter" :min="0" :max="720" suffix=" min" showButtons />
+        </div>
+        <div class="field">
+          <label>{{ t('settings.lateThreshold') }}</label>
+          <InputNumber v-model="lateThreshold" :min="0" :max="720" suffix=" min" showButtons />
+        </div>
+
+        <div class="theme-actions">
+          <button type="button" class="save-btn" @click="saveWindow">
+            {{ t('settings.checkinWindowSave') }}
+          </button>
+          <small v-if="windowSaved" class="saved">{{ t('settings.checkinWindowSaved') }}</small>
+          <small v-if="windowError" class="error">{{ windowError }}</small>
         </div>
       </template>
     </Card>

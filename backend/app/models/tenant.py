@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -27,6 +27,21 @@ class Tenant(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     #: Colour mode: "light" or "dark".
     theme_mode: Mapped[str] = mapped_column(
         String(16), nullable=False, default="light", server_default="light"
+    )
+
+    # Check-in time window (minutes) relative to a session's start, configurable
+    # per studio by the studio admin.
+    #: How many minutes before start check-in opens.
+    checkin_opens_before: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default="30"
+    )
+    #: How many minutes after start check-in stays open.
+    checkin_closes_after: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=15, server_default="15"
+    )
+    #: Minutes after start beyond which a check-in counts as "late".
+    checkin_late_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default="5"
     )
 
     def __repr__(self) -> str:

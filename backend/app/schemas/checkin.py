@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.checkin import AttendanceStatus, CheckInMethod
 
@@ -57,3 +57,19 @@ class AttendanceRead(BaseModel):
     member_id: uuid.UUID
     status: AttendanceStatus
     recorded_by: uuid.UUID | None
+
+
+class CheckinWindowRead(BaseModel):
+    """Per-studio check-in time window, in minutes relative to session start."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    checkin_opens_before: int
+    checkin_closes_after: int
+    checkin_late_threshold: int
+
+
+class CheckinWindowUpdate(BaseModel):
+    checkin_opens_before: int | None = Field(default=None, ge=0, le=720)
+    checkin_closes_after: int | None = Field(default=None, ge=0, le=720)
+    checkin_late_threshold: int | None = Field(default=None, ge=0, le=720)

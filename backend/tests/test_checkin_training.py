@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -93,6 +93,54 @@ async def test_invalid_qr_token_rejected(client):
         headers=headers,
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_checkin_window_configurable(client):
+    headers, _, member = await _setup(client)
+
+    # Defaults are exposed.
+    win = await client.get("/api/v1/checkin/window", headers=headers)
+    assert win.status_code == 200
+    assert win.json() == {
+        "checkin_opens_before": 30,
+        "checkin_closes_after": 15,
+        "checkin_late_threshold": 5,
+    }
+
+    # Admin narrows the window to zero on both sides.
+    upd = await client.patch(
+        "/api/v1/checkin/window",
+        json={"checkin_opens_before": 0, "checkin_closes_after": 0},
+        headers=headers,
+    )
+    assert upd.status_code == 200, upd.text
+    assert upd.json()["checkin_opens_before"] == 0
+
+    # A session starting well in the future is now outside the window.
+    course = (
+        await client.post(
+            "/api/v1/courses",
+            json={"name": "Later", "max_participants": 10, "duration_minutes": 60},
+            headers=headers,
+        )
+    ).json()
+    future = (datetime.now(UTC).replace(microsecond=0) + timedelta(hours=2)).isoformat()
+    session = (
+        await client.post(
+            f"/api/v1/courses/{course['id']}/sessions",
+            json={"course_id": course["id"], "starts_at": future},
+            headers=headers,
+        )
+    ).json()
+    passq = await client.get(f"/api/v1/checkin/pass/{member['id']}", headers=headers)
+    token = passq.json()["token"]
+    resp = await client.post(
+        "/api/v1/checkin/qr",
+        json={"token": token, "session_id": session["id"]},
+        headers=headers,
+    )
+    assert resp.status_code == 409
 
 
 @pytest.mark.asyncio

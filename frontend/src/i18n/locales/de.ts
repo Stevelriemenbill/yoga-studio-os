@@ -109,6 +109,15 @@ export default {
     themeSave: 'Speichern',
     themeSaved: 'Erscheinungsbild aktualisiert.',
     themeError: 'Speichern fehlgeschlagen.',
+    checkinWindowSection: 'Check-in-Zeitfenster',
+    checkinWindowHint:
+      'Lege fest, wann sich das Check-in relativ zum Kursbeginn öffnet und schließt.',
+    opensBefore: 'Öffnet vor Beginn',
+    closesAfter: 'Schließt nach Beginn',
+    lateThreshold: 'Als „zu spät“ ab',
+    checkinWindowSave: 'Speichern',
+    checkinWindowSaved: 'Zeitfenster aktualisiert.',
+    checkinWindowError: 'Speichern fehlgeschlagen.',
     modes: {
       light: 'Hell',
       dark: 'Dunkel',

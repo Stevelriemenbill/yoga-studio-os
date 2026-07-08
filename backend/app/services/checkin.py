@@ -17,8 +17,10 @@ from app.models.checkin import (
 )
 from app.models.member import Member
 from app.models.session import CourseSession
+from app.models.tenant import Tenant
 
-# Anti-abuse: allowed check-in window relative to session start.
+# Default check-in window (minutes) relative to session start. Per-studio values
+# on the Tenant override these; the constants remain the fallback / defaults.
 CHECKIN_OPENS_BEFORE = timedelta(minutes=30)
 CHECKIN_CLOSES_AFTER = timedelta(minutes=15)
 LATE_THRESHOLD = timedelta(minutes=5)
@@ -105,12 +107,17 @@ class AttendanceRepository(TenantRepository[Attendance]):
         return list(result.scalars().all())
 
 
-def _validate_window(session: CourseSession, now: datetime) -> None:
+def _validate_window(
+    session: CourseSession,
+    now: datetime,
+    opens_before: timedelta,
+    closes_after: timedelta,
+) -> None:
     starts = session.starts_at
     if starts.tzinfo is None:
         starts = starts.replace(tzinfo=UTC)
-    opens = starts - CHECKIN_OPENS_BEFORE
-    closes = starts + CHECKIN_CLOSES_AFTER
+    opens = starts - opens_before
+    closes = starts + closes_after
     if now < opens:
         raise CheckInError("Check-in not yet open for this session")
     if now > closes:
@@ -129,8 +136,26 @@ async def check_in(
     requires_confirmation: bool = False,
 ) -> CheckIn:
     now = datetime.now(UTC)
+
+    tenant = await db.get(Tenant, tenant_id)
+    opens_before = (
+        timedelta(minutes=tenant.checkin_opens_before)
+        if tenant is not None
+        else CHECKIN_OPENS_BEFORE
+    )
+    closes_after = (
+        timedelta(minutes=tenant.checkin_closes_after)
+        if tenant is not None
+        else CHECKIN_CLOSES_AFTER
+    )
+    late_threshold = (
+        timedelta(minutes=tenant.checkin_late_threshold)
+        if tenant is not None
+        else LATE_THRESHOLD
+    )
+
     if enforce_window:
-        _validate_window(session, now)
+        _validate_window(session, now, opens_before, closes_after)
 
     checkin_repo = CheckInRepository(db, tenant_id)
     # Anti-abuse: only one check-in per member per session.
@@ -171,7 +196,7 @@ async def check_in(
             starts = starts.replace(tzinfo=UTC)
         att_status = (
             AttendanceStatus.LATE
-            if now > starts + LATE_THRESHOLD
+            if now > starts + late_threshold
             else AttendanceStatus.PRESENT
         )
         await _upsert_attendance(db, tenant_id, session.id, member.id, att_status)

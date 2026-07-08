@@ -4,17 +4,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user, require_staff
+from app.api.deps import CurrentUser, get_current_user, require_admin, require_staff
 from app.db.session import get_db
 from app.models.checkin import CheckInMethod
 from app.models.member import Member
 from app.models.session import CourseSession
+from app.models.tenant import Tenant
 from app.models.user import STAFF_ROLES
 from app.schemas.checkin import (
     AttendanceConfirm,
     AttendanceRead,
     AttendanceSet,
     CheckInRead,
+    CheckinWindowRead,
+    CheckinWindowUpdate,
     ManualCheckInRequest,
     MemberPassRead,
     QRCheckInRequest,
@@ -117,6 +120,35 @@ async def manual_check_in(
         )
     except CheckInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get("/window", response_model=CheckinWindowRead)
+async def get_checkin_window(
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CheckinWindowRead:
+    """The studio-wide check-in time window. Readable by any authenticated user."""
+    tenant = await db.get(Tenant, current.tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Studio not found")
+    return CheckinWindowRead.model_validate(tenant)
+
+
+@router.patch("/window", response_model=CheckinWindowRead)
+async def update_checkin_window(
+    data: CheckinWindowUpdate,
+    current: CurrentUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> CheckinWindowRead:
+    """Set the studio-wide check-in time window. Studio admin only."""
+    tenant = await db.get(Tenant, current.tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Studio not found")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(tenant, field, value)
+    await db.commit()
+    await db.refresh(tenant)
+    return CheckinWindowRead.model_validate(tenant)
 
 
 @attendance_router.get("/session/{session_id}", response_model=list[AttendanceRead])

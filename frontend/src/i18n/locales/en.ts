@@ -109,6 +109,15 @@ export default {
     themeSave: 'Save',
     themeSaved: 'Appearance updated.',
     themeError: 'Could not save.',
+    checkinWindowSection: 'Check-in time window',
+    checkinWindowHint:
+      'Set when check-in opens and closes relative to the session start.',
+    opensBefore: 'Opens before start',
+    closesAfter: 'Closes after start',
+    lateThreshold: 'Counts as “late” after',
+    checkinWindowSave: 'Save',
+    checkinWindowSaved: 'Time window updated.',
+    checkinWindowError: 'Could not save.',
     modes: {
       light: 'Light',
       dark: 'Dark',
