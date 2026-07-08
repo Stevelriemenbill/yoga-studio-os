@@ -5,7 +5,7 @@ from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, get_current_user
+from app.api.deps import CurrentUser, get_current_user, require_admin
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -19,10 +19,13 @@ from app.schemas.auth import (
     AcceptInviteResult,
     InvitedMember,
     LoginRequest,
+    MeRead,
     RefreshRequest,
     RegistrationResult,
     StudioRegistration,
     TenantRead,
+    ThemeRead,
+    ThemeUpdate,
     Token,
     UserRead,
 )
@@ -104,9 +107,57 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
     )
 
 
-@router.get("/me", response_model=UserRead)
-async def me(current: CurrentUser = Depends(get_current_user)) -> UserRead:
-    return UserRead.model_validate(current.user)
+@router.get("/me", response_model=MeRead)
+async def me(
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MeRead:
+    tenant = await db.get(Tenant, current.tenant_id)
+    return MeRead(
+        id=current.user.id,
+        tenant_id=current.user.tenant_id,
+        email=current.user.email,
+        full_name=current.user.full_name,
+        role=current.user.role,
+        is_active=current.user.is_active,
+        studio_name=tenant.name if tenant else "",
+        theme_preset=tenant.theme_preset if tenant else "emerald",
+        theme_mode=tenant.theme_mode if tenant else "light",
+    )
+
+
+@router.get("/theme", response_model=ThemeRead)
+async def get_theme(
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ThemeRead:
+    """The studio-wide theme. Readable by any authenticated user so the app
+    shell can apply it for members and staff alike."""
+    tenant = await db.get(Tenant, current.tenant_id)
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Studio not found"
+        )
+    return ThemeRead.model_validate(tenant)
+
+
+@router.patch("/theme", response_model=ThemeRead)
+async def update_theme(
+    data: ThemeUpdate,
+    current: CurrentUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ThemeRead:
+    """Set the studio-wide theme. Studio admin only."""
+    tenant = await db.get(Tenant, current.tenant_id)
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Studio not found"
+        )
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(tenant, field, value)
+    await db.commit()
+    await db.refresh(tenant)
+    return ThemeRead.model_validate(tenant)
 
 
 @router.get("/invite/{token}", response_model=InvitedMember)

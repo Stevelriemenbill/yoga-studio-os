@@ -59,7 +59,10 @@ async function logout() {
     <aside class="sidebar">
       <div class="brand">
         <span class="logo">◎</span>
-        <span>{{ t('common.appName') }}</span>
+        <span class="brand__text">
+          <span class="brand__studio">{{ auth.studioName || t('common.appName') }}</span>
+          <span v-if="auth.studioName" class="brand__app">{{ t('common.appName') }}</span>
+        </span>
       </div>
 
       <nav class="nav">
@@ -138,6 +141,24 @@ async function logout() {
 .logo {
   color: #10b981;
   font-size: 1.4rem;
+}
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.brand__studio {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brand__app {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 .nav {
   display: flex;

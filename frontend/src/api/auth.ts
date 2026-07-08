@@ -1,8 +1,10 @@
 import { api } from './client'
 import type {
   LoginRequest,
+  Me,
   RegistrationResult,
   StudioRegistration,
+  ThemeSettings,
   Token,
   User,
 } from '@/types'
@@ -19,8 +21,15 @@ export async function login(payload: LoginRequest): Promise<Token> {
   return data
 }
 
-export async function fetchMe(): Promise<User> {
-  const { data } = await api.get<User>('/auth/me')
+export async function fetchMe(): Promise<Me> {
+  const { data } = await api.get<Me>('/auth/me')
+  return data
+}
+
+export async function updateTheme(
+  payload: Partial<ThemeSettings>,
+): Promise<ThemeSettings> {
+  const { data } = await api.patch<ThemeSettings>('/auth/theme', payload)
   return data
 }
 

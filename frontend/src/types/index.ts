@@ -15,6 +15,18 @@ export interface User {
   is_active: boolean
 }
 
+/** `/auth/me` response: the user plus studio context for the app shell. */
+export interface Me extends User {
+  studio_name: string
+  theme_preset: string
+  theme_mode: string
+}
+
+export interface ThemeSettings {
+  theme_preset: string
+  theme_mode: string
+}
+
 export interface Tenant {
   id: string
   name: string

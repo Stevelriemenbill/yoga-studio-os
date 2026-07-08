@@ -3,7 +3,14 @@ import { defineStore } from 'pinia'
 
 import * as authApi from '@/api/auth'
 import { configureAuthHandlers, setTokens } from '@/api/client'
-import type { LoginRequest, StudioRegistration, User } from '@/types'
+import {
+  applyTheme,
+  DEFAULT_MODE,
+  DEFAULT_PRESET,
+  type ThemeMode,
+  type ThemePreset,
+} from '@/theme'
+import type { LoginRequest, Me, StudioRegistration, User } from '@/types'
 
 const ACCESS_KEY = 'studio_os_access'
 const REFRESH_KEY = 'studio_os_refresh'
@@ -11,10 +18,21 @@ const REFRESH_KEY = 'studio_os_refresh'
 export const useAuthStore = defineStore('auth', () => {
   const accessToken = ref<string | null>(localStorage.getItem(ACCESS_KEY))
   const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_KEY))
-  const user = ref<User | null>(null)
+  const user = ref<Me | null>(null)
   const initialized = ref(false)
 
   const isAuthenticated = computed(() => !!accessToken.value)
+  const studioName = computed(() => user.value?.studio_name ?? '')
+  const isAdmin = computed(() => user.value?.role === 'studio_admin')
+
+  /** Apply the studio theme carried by the `/auth/me` payload. */
+  function applyUserTheme(): void {
+    if (!user.value) return
+    applyTheme(
+      (user.value.theme_preset as ThemePreset) || DEFAULT_PRESET,
+      (user.value.theme_mode as ThemeMode) || DEFAULT_MODE,
+    )
+  }
 
   function persist(access: string | null, refresh: string | null): void {
     accessToken.value = access
@@ -35,6 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (!accessToken.value) return
     try {
       user.value = await authApi.fetchMe()
+      applyUserTheme()
     } catch {
       logout()
     }
@@ -49,17 +68,31 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(payload: StudioRegistration): Promise<void> {
     const result = await authApi.register(payload)
     persist(result.token.access_token, result.token.refresh_token)
-    user.value = result.user
+    // Registration returns a plain user; fetch full studio context + theme.
+    await loadUser()
   }
 
   /** Establish a session from tokens obtained out-of-band (e.g. invite accept). */
-  function applySession(
+  async function applySession(
     tokens: { access_token: string; refresh_token: string },
-    nextUser: User,
-  ): void {
+    _nextUser: User,
+  ): Promise<void> {
     persist(tokens.access_token, tokens.refresh_token)
-    user.value = nextUser
+    await loadUser()
     initialized.value = true
+  }
+
+  /** Studio admin: change the studio-wide theme (persisted server-side). */
+  async function setTheme(preset: ThemePreset, mode: ThemeMode): Promise<void> {
+    const saved = await authApi.updateTheme({
+      theme_preset: preset,
+      theme_mode: mode,
+    })
+    if (user.value) {
+      user.value.theme_preset = saved.theme_preset
+      user.value.theme_mode = saved.theme_mode
+    }
+    applyTheme(preset, mode)
   }
 
   async function initialize(): Promise<void> {
@@ -79,11 +112,14 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     initialized,
     isAuthenticated,
+    studioName,
+    isAdmin,
     login,
     register,
     applySession,
     logout,
     loadUser,
+    setTheme,
     initialize,
   }
 })

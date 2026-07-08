@@ -91,6 +91,18 @@ async def require_staff(
     return current
 
 
+async def require_admin(
+    current: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """Only the studio admin may pass (e.g. studio-wide settings)."""
+    if current.role is not UserRole.STUDIO_ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Studio admin access required",
+        )
+    return current
+
+
 async def get_current_member(
     current: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

@@ -51,7 +51,7 @@ async function submit() {
   submitting.value = true
   try {
     const result = await acceptInvite(token, password.value)
-    auth.applySession(result.token, result.user)
+    await auth.applySession(result.token, result.user)
     await router.push('/')
   } catch (e: unknown) {
     error.value = extractError(e, t('auth.invite.activateFailed'))

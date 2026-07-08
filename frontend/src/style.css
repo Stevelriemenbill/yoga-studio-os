@@ -19,3 +19,26 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* Studio-wide dark mode. PrimeVue components react to `.app-dark` on <html>
+   automatically; these rules cover the custom app chrome and page surfaces. */
+.app-dark {
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+.app-dark body {
+  background: #0b1120;
+}
+.app-dark .app-shell {
+  background: #0b1120;
+}
+.app-dark .topbar {
+  background: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+}
+.app-dark .page-title {
+  color: #f1f5f9 !important;
+}
+.app-dark a {
+  color: #34d399;
+}

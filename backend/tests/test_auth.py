@@ -103,7 +103,87 @@ async def test_me_returns_current_user(client):
         "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert resp.status_code == 200
-    assert resp.json()["email"] == "admin@zenflow.example.com"
+    body = resp.json()
+    assert body["email"] == "admin@zenflow.example.com"
+    # Studio context for the app shell.
+    assert body["studio_name"] == "Zen Flow Studio"
+    assert body["theme_preset"] == "emerald"
+    assert body["theme_mode"] == "light"
+
+
+@pytest.mark.asyncio
+async def test_get_theme_defaults(client):
+    reg = (await _register(client)).json()
+    token = reg["token"]["access_token"]
+    resp = await client.get(
+        "/api/v1/auth/theme", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"theme_preset": "emerald", "theme_mode": "light"}
+
+
+@pytest.mark.asyncio
+async def test_admin_updates_theme(client):
+    reg = (await _register(client)).json()
+    token = reg["token"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = await client.patch(
+        "/api/v1/auth/theme",
+        json={"theme_preset": "violet", "theme_mode": "dark"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"theme_preset": "violet", "theme_mode": "dark"}
+    # Persisted and reflected in /me.
+    me = (await client.get("/api/v1/auth/me", headers=headers)).json()
+    assert me["theme_preset"] == "violet"
+    assert me["theme_mode"] == "dark"
+
+
+@pytest.mark.asyncio
+async def test_update_theme_rejects_unknown_preset(client):
+    reg = (await _register(client)).json()
+    token = reg["token"]["access_token"]
+    resp = await client.patch(
+        "/api/v1/auth/theme",
+        json={"theme_preset": "chartreuse"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_member_cannot_update_theme(client):
+    staff = {"Authorization": f"Bearer {(await _register(client)).json()['token']['access_token']}"}
+    member = (
+        await client.post(
+            "/api/v1/members",
+            json={"first_name": "Mira", "last_name": "M", "email": "mira@example.com"},
+            headers=staff,
+        )
+    ).json()
+    token = (
+        await client.post(
+            f"/api/v1/members/{member['id']}/invite", headers=staff
+        )
+    ).json()["token"]
+    accepted = await client.post(
+        "/api/v1/auth/invite/accept",
+        json={"token": token, "password": "memberpass1"},
+    )
+    member_token = accepted.json()["token"]["access_token"]
+    # Members may read the theme but not change it.
+    read = await client.get(
+        "/api/v1/auth/theme",
+        headers={"Authorization": f"Bearer {member_token}"},
+    )
+    assert read.status_code == 200
+    resp = await client.patch(
+        "/api/v1/auth/theme",
+        json={"theme_preset": "violet"},
+        headers={"Authorization": f"Bearer {member_token}"},
+    )
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio

@@ -55,6 +55,18 @@ class UserRead(BaseModel):
     is_active: bool
 
 
+class MeRead(UserRead):
+    """The authenticated user plus the studio context needed by the app shell.
+
+    Carries the studio name (for display) and the studio-wide theme so the
+    frontend can apply the same look for every user of the studio.
+    """
+
+    studio_name: str
+    theme_preset: str
+    theme_mode: str
+
+
 class TenantRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -62,6 +74,40 @@ class TenantRead(BaseModel):
     name: str
     slug: str
     is_active: bool
+
+
+#: Accent colour presets the studio admin can choose from. Mirrors the
+#: frontend theme module; validated here to reject arbitrary values.
+THEME_PRESETS = frozenset(
+    {"emerald", "blue", "violet", "amber", "rose", "teal", "indigo"}
+)
+THEME_MODES = frozenset({"light", "dark"})
+
+
+class ThemeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    theme_preset: str
+    theme_mode: str
+
+
+class ThemeUpdate(BaseModel):
+    theme_preset: str | None = Field(default=None, max_length=32)
+    theme_mode: str | None = Field(default=None, max_length=16)
+
+    @field_validator("theme_preset")
+    @classmethod
+    def _validate_preset(cls, v: str | None) -> str | None:
+        if v is not None and v not in THEME_PRESETS:
+            raise ValueError(f"unknown theme preset: {v}")
+        return v
+
+    @field_validator("theme_mode")
+    @classmethod
+    def _validate_mode(cls, v: str | None) -> str | None:
+        if v is not None and v not in THEME_MODES:
+            raise ValueError(f"unknown theme mode: {v}")
+        return v
 
 
 class RegistrationResult(BaseModel):
