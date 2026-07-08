@@ -64,6 +64,7 @@ class MeRead(UserRead):
     """
 
     studio_name: str
+    studio_slug: str
     theme_preset: str
     theme_mode: str
 

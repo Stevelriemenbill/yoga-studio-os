@@ -122,6 +122,7 @@ async def me(
         role=current.user.role,
         is_active=current.user.is_active,
         studio_name=tenant.name if tenant else "",
+        studio_slug=tenant.slug if tenant else "",
         theme_preset=tenant.theme_preset if tenant else "emerald",
         theme_mode=tenant.theme_mode if tenant else "light",
     )

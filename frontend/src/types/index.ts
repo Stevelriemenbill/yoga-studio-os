@@ -18,6 +18,7 @@ export interface User {
 /** `/auth/me` response: the user plus studio context for the app shell. */
 export interface Me extends User {
   studio_name: string
+  studio_slug: string
   theme_preset: string
   theme_mode: string
 }

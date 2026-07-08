@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/join/:slug',
+      name: 'join',
+      component: () => import('@/views/JoinView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       children: [
@@ -58,6 +64,11 @@ const router = createRouter({
           path: 'users',
           name: 'users',
           component: () => import('@/views/UsersView.vue'),
+        },
+        {
+          path: 'join-requests',
+          name: 'join-requests',
+          component: () => import('@/views/JoinRequestsView.vue'),
         },
         {
           path: 'bookings',

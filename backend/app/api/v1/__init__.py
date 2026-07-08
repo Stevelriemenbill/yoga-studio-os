@@ -10,6 +10,7 @@ from app.api.v1 import (
     courses,
     events,
     integrations,
+    join,
     me,
     members,
     notifications,
@@ -36,3 +37,5 @@ api_router.include_router(automations.router)
 api_router.include_router(ai.router)
 api_router.include_router(events.router)
 api_router.include_router(integrations.router)
+api_router.include_router(join.public_router)
+api_router.include_router(join.router)

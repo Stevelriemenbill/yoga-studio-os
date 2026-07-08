@@ -20,6 +20,7 @@ from app.models.integrations import (
     WebhookDeliveryStatus,
     WebhookEndpoint,
 )
+from app.models.join_request import JoinRequest, JoinRequestStatus
 from app.models.member import Member, MembershipType
 from app.models.notification import (
     Notification,
@@ -70,6 +71,8 @@ __all__ = [
     "AutomationTrigger",
     "AIInsight",
     "InsightType",
+    "JoinRequest",
+    "JoinRequestStatus",
     "StudentNote",
     "StaffInvite",
     "StaffInviteStatus",

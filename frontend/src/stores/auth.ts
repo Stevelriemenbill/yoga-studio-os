@@ -23,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!accessToken.value)
   const studioName = computed(() => user.value?.studio_name ?? '')
+  const studioSlug = computed(() => user.value?.studio_slug ?? '')
   const isAdmin = computed(() => user.value?.role === 'studio_admin')
 
   /** Apply the studio theme carried by the `/auth/me` payload. */
@@ -113,6 +114,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isAuthenticated,
     studioName,
+    studioSlug,
     isAdmin,
     login,
     register,
