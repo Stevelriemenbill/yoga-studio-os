@@ -486,16 +486,18 @@ onMounted(load)
 
           <!-- Member view: booking controls -->
           <template v-if="isMember">
-            <Tag v-if="isBooked(s.id)" severity="success" :value="t('calendar.booked')" />
-            <a
-              v-if="isBooked(s.id) && s.effective_is_online && s.effective_online_url"
-              :href="s.effective_online_url"
-              target="_blank"
-              rel="noopener"
-              class="join-link"
-            >
-              <i class="pi pi-external-link" /> {{ t('calendar.joinOnline') }}
-            </a>
+            <template v-if="isBooked(s.id)">
+              <Tag severity="success" :value="t('calendar.booked')" />
+              <a
+                v-if="s.effective_is_online && s.effective_online_url"
+                :href="s.effective_online_url"
+                target="_blank"
+                rel="noopener"
+                class="join-link"
+              >
+                <i class="pi pi-external-link" /> {{ t('calendar.joinOnline') }}
+              </a>
+            </template>
             <Tag
               v-else-if="isPast(s)"
               severity="secondary"
