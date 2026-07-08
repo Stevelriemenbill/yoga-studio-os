@@ -24,6 +24,9 @@ class CourseSession(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     course_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    #: Groups sessions generated together by a single recurrence rule.
+    #: NULL for individually created sessions.
+    series_id: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True, index=True)
     teacher_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

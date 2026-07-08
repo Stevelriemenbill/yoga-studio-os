@@ -164,11 +164,33 @@ class SessionCancel(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class SeriesUpdate(BaseModel):
+    """Apply common changes to all future sessions of a recurrence series.
+
+    ``start_time`` shifts the time-of-day of each session (the date is kept).
+    Unset fields are left unchanged.
+    """
+
+    start_time: time | None = None
+    teacher_id: uuid.UUID | None = None
+    room_id: uuid.UUID | None = None
+    capacity: int | None = Field(default=None, ge=1)
+    location: str | None = Field(default=None, max_length=255)
+    is_online: bool | None = None
+    online_url: str | None = Field(default=None, max_length=500)
+
+
+class SeriesActionResult(BaseModel):
+    series_id: uuid.UUID
+    affected: int
+
+
 class SessionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     course_id: uuid.UUID
+    series_id: uuid.UUID | None = None
     teacher_id: uuid.UUID | None
     room_id: uuid.UUID | None
     starts_at: datetime

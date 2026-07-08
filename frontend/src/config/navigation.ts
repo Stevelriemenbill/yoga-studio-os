@@ -69,6 +69,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { labelKey: 'nav.mySchedule', icon: 'pi pi-calendar-plus', to: '/me/schedule', roles: MEMBERS, hintKey: 'nav.hints.mySchedule' },
       { labelKey: 'nav.myEvents', icon: 'pi pi-star', to: '/me/events', roles: MEMBERS, hintKey: 'nav.hints.myEvents' },
       { labelKey: 'nav.myBookings', icon: 'pi pi-ticket', to: '/me/bookings', roles: MEMBERS, hintKey: 'nav.hints.myBookings' },
+      { labelKey: 'nav.myHistory', icon: 'pi pi-history', to: '/me/history', roles: MEMBERS, hintKey: 'nav.hints.myHistory' },
       { labelKey: 'nav.myPass', icon: 'pi pi-qrcode', to: '/me/pass', roles: MEMBERS, hintKey: 'nav.hints.myPass' },
     ],
   },

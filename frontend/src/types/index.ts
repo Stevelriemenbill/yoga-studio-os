@@ -122,6 +122,7 @@ export type SessionStatus = 'scheduled' | 'cancelled' | 'completed'
 export interface CourseSession {
   id: string
   course_id: string
+  series_id?: string | null
   starts_at: string
   ends_at?: string | null
   teacher_id: string | null
@@ -143,6 +144,21 @@ export interface SessionWithStats extends CourseSession {
   effective_location: string | null
   effective_is_online: boolean
   effective_online_url: string | null
+}
+
+export interface ParticipationEntry {
+  session_id: string
+  course_name: string
+  starts_at: string
+  hours: number
+  counts_for_training: boolean
+}
+
+export interface ParticipationHistory {
+  total_sessions: number
+  total_hours: number
+  training_hours: number
+  entries: ParticipationEntry[]
 }
 
 // --- Bookings / Waitlist ---

@@ -28,6 +28,8 @@ from app.schemas.course import (
     RecurrenceSchedule,
     RoomCreate,
     RoomRead,
+    SeriesActionResult,
+    SeriesUpdate,
     SessionCancel,
     SessionCreate,
     SessionRead,
@@ -46,6 +48,7 @@ from app.services.course import (
 router = APIRouter(prefix="/courses", tags=["courses"])
 rooms_router = APIRouter(prefix="/rooms", tags=["rooms"])
 sessions_router = APIRouter(prefix="/sessions", tags=["sessions"])
+series_router = APIRouter(prefix="/series", tags=["series"])
 
 
 # --- Rooms ---
@@ -291,6 +294,52 @@ async def cancel_session(
     return await course_service.cancel_session(
         db, session, reason, tenant_id=current.tenant_id
     )
+
+
+# --- Series (recurrence) ---
+@series_router.get("/{series_id}", response_model=list[SessionWithStats])
+async def list_series_sessions(
+    series_id: uuid.UUID,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    sessions = await SessionRepository(db, current.tenant_id).list_for_series(series_id)
+    if not sessions:
+        raise HTTPException(status_code=404, detail="Series not found")
+    return await _attach_stats(db, current.tenant_id, sessions)
+
+
+@series_router.patch("/{series_id}", response_model=SeriesActionResult)
+async def update_series(
+    series_id: uuid.UUID,
+    data: SeriesUpdate,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    existing = await SessionRepository(db, current.tenant_id).list_for_series(series_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Series not found")
+    updated = await course_service.update_series(
+        db, current.tenant_id, series_id, data
+    )
+    return SeriesActionResult(series_id=series_id, affected=len(updated))
+
+
+@series_router.post("/{series_id}/cancel", response_model=SeriesActionResult)
+async def cancel_series(
+    series_id: uuid.UUID,
+    data: SessionCancel | None = None,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    existing = await SessionRepository(db, current.tenant_id).list_for_series(series_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Series not found")
+    reason = data.reason if data else None
+    affected = await course_service.cancel_series(
+        db, current.tenant_id, series_id, reason
+    )
+    return SeriesActionResult(series_id=series_id, affected=affected)
 
 
 async def _attach_stats(

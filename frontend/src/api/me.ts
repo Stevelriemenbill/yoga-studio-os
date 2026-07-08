@@ -3,6 +3,7 @@ import type {
   Booking,
   Course,
   MemberPass,
+  ParticipationHistory,
   SessionWithStats,
   Member,
   StudioEvent,
@@ -33,6 +34,12 @@ export async function myProfile(): Promise<Member> {
 /** All of the current member's bookings. */
 export async function myBookings(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>('/me/bookings')
+  return data
+}
+
+/** The current member's participation history and accumulated hours. */
+export async function myParticipation(): Promise<ParticipationHistory> {
+  const { data } = await api.get<ParticipationHistory>('/me/participation')
   return data
 }
 

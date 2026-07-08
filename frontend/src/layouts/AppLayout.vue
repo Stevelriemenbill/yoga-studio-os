@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 
 import { useAuthStore } from '@/stores/auth'
-import { getUnreadCount } from '@/api/messages'
+import { useMessages } from '@/stores/messages'
 import {
   NAV_GROUPS,
   ROUTE_TITLE_KEYS,
@@ -17,21 +17,17 @@ const auth = useAuthStore()
 const router = useRouter()
 const { t } = useI18n()
 
-const unreadMessages = ref(0)
+const { unreadMessages, refreshUnread } = useMessages()
 let unreadTimer: ReturnType<typeof setInterval> | undefined
 
-async function refreshUnread() {
+function pollUnread() {
   if (!auth.isAuthenticated) return
-  try {
-    unreadMessages.value = await getUnreadCount()
-  } catch {
-    /* ignore polling errors */
-  }
+  refreshUnread()
 }
 
 onMounted(() => {
-  refreshUnread()
-  unreadTimer = setInterval(refreshUnread, 30000)
+  pollUnread()
+  unreadTimer = setInterval(pollUnread, 30000)
 })
 
 onUnmounted(() => {

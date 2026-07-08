@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.schemas.course import (
     CourseUpdate,
     RecurrenceSchedule,
     RoomCreate,
+    SeriesUpdate,
     SessionCreate,
     SessionUpdate,
 )
@@ -59,6 +60,15 @@ class SessionRepository(TenantRepository[CourseSession]):
             .where(CourseSession.course_id == course_id)
             .order_by(CourseSession.starts_at)
         )
+        return list(result.scalars().all())
+
+    async def list_for_series(
+        self, series_id: uuid.UUID, *, only_future: bool = False
+    ) -> list[CourseSession]:
+        query = self._base_query().where(CourseSession.series_id == series_id)
+        if only_future:
+            query = query.where(CourseSession.starts_at >= datetime.now(UTC))
+        result = await self.db.execute(query.order_by(CourseSession.starts_at))
         return list(result.scalars().all())
 
 
@@ -143,6 +153,7 @@ async def schedule_recurring(
     # Avoid duplicates: fetch existing start times for this course.
     existing = {s.starts_at.replace(tzinfo=None) for s in await repo.list_for_course(course.id)}
 
+    series_id = uuid.uuid4()
     created: list[CourseSession] = []
     for start in starts:
         if start.replace(tzinfo=None) in existing:
@@ -150,6 +161,7 @@ async def schedule_recurring(
         session = repo.add(
             CourseSession(
                 course_id=course.id,
+                series_id=series_id,
                 teacher_id=course.teacher_id,
                 room_id=course.room_id,
                 starts_at=start,
@@ -217,3 +229,73 @@ async def cancel_session(
     await db.commit()
     await db.refresh(session)
     return session
+
+
+# --- Series operations ---
+def _future_scheduled(sessions: list[CourseSession]) -> list[CourseSession]:
+    now = datetime.now(UTC)
+
+    def _is_future(dt: datetime) -> bool:
+        # SQLite returns naive datetimes; treat them as UTC for comparison.
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt >= now
+
+    return [
+        s
+        for s in sessions
+        if s.status == SessionStatus.SCHEDULED and _is_future(s.starts_at)
+    ]
+
+
+async def update_series(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    series_id: uuid.UUID,
+    data: SeriesUpdate,
+) -> list[CourseSession]:
+    """Apply common changes to all future, still-scheduled sessions of a series."""
+    repo = SessionRepository(db, tenant_id)
+    sessions = _future_scheduled(await repo.list_for_series(series_id))
+    changes = data.model_dump(exclude_unset=True)
+    new_time = changes.pop("start_time", None)
+
+    for session in sessions:
+        for field, value in changes.items():
+            setattr(session, field, value)
+        if new_time is not None:
+            # Keep the date, replace the time-of-day; recompute ends_at from
+            # the existing session duration.
+            duration = session.ends_at - session.starts_at
+            session.starts_at = session.starts_at.replace(
+                hour=new_time.hour,
+                minute=new_time.minute,
+                second=new_time.second,
+                microsecond=0,
+            )
+            session.ends_at = session.starts_at + duration
+
+    await db.commit()
+    for s in sessions:
+        await db.refresh(s)
+    return sessions
+
+
+async def cancel_series(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    series_id: uuid.UUID,
+    reason: str | None,
+) -> int:
+    """Cancel every future, still-scheduled session of a series.
+
+    Past sessions are left untouched. Booked members are notified.
+    Returns the number of cancelled sessions.
+    """
+    repo = SessionRepository(db, tenant_id)
+    sessions = _future_scheduled(await repo.list_for_series(series_id))
+    for session in sessions:
+        await cancel_session(
+            db, session, reason, tenant_id=tenant_id, notify=True
+        )
+    return len(sessions)

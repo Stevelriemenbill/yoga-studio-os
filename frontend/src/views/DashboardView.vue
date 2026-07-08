@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
+import Button from 'primevue/button'
 
 import { useAuthStore } from '@/stores/auth'
 import { useRealtime } from '@/composables/useRealtime'
@@ -15,6 +16,27 @@ const { t, locale } = useI18n()
 const roleLabel = computed(() =>
   auth.user ? t(`roles.${auth.user.role}`) : '',
 )
+
+// Front-desk staff can share the studio's onboarding link straight from home.
+const FRONT_DESK = ['studio_admin', 'studio_manager', 'reception']
+const canOnboard = computed(
+  () => !!auth.user && FRONT_DESK.includes(auth.user.role),
+)
+const joinLink = computed(() =>
+  auth.studioSlug ? `${window.location.origin}/join/${auth.studioSlug}` : '',
+)
+const linkCopied = ref(false)
+
+async function copyJoinLink() {
+  if (!joinLink.value) return
+  try {
+    await navigator.clipboard.writeText(joinLink.value)
+    linkCopied.value = true
+    setTimeout(() => (linkCopied.value = false), 2500)
+  } catch {
+    /* clipboard unavailable */
+  }
+}
 
 const kpis = ref<CommunityPulse | null>(null)
 const loading = ref(true)
@@ -60,6 +82,30 @@ onMounted(async () => {
     </div>
 
     <div class="grid">
+      <Card v-if="canOnboard && joinLink" class="onboard">
+        <template #title>{{ t('dashboard.onboarding.title') }}</template>
+        <template #content>
+          <p class="muted">{{ t('dashboard.onboarding.hint') }}</p>
+          <code class="join-link">{{ joinLink }}</code>
+          <div class="onboard-actions">
+            <Button
+              :icon="linkCopied ? 'pi pi-check' : 'pi pi-copy'"
+              :label="linkCopied ? t('dashboard.onboarding.copied') : t('dashboard.onboarding.copyLink')"
+              size="small"
+              @click="copyJoinLink"
+            />
+            <router-link to="/join-requests">
+              <Button
+                icon="pi pi-user-plus"
+                :label="t('dashboard.onboarding.manage')"
+                size="small"
+                text
+              />
+            </router-link>
+          </div>
+        </template>
+      </Card>
+
       <Card>
         <template #title>{{ t('dashboard.yourAccount') }}</template>
         <template #content>
@@ -124,5 +170,21 @@ onMounted(async () => {
 }
 .muted {
   color: #9ca3af;
+}
+.join-link {
+  display: block;
+  font-family: monospace;
+  word-break: break-all;
+  background: var(--p-primary-50, #ecfdf5);
+  border: 1px solid var(--p-primary-200, #a7f3d0);
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  margin: 0.5rem 0 0.85rem;
+}
+.onboard-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 </style>

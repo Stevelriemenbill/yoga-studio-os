@@ -165,3 +165,52 @@ export async function cancelSession(
   )
   return data
 }
+
+// --- Series (recurrence management) ---
+export interface SeriesUpdatePayload {
+  /** "HH:MM:SS" local time; shifts the time-of-day of every future session. */
+  start_time?: string
+  teacher_id?: string | null
+  room_id?: string | null
+  capacity?: number | null
+  location?: string | null
+  is_online?: boolean | null
+  online_url?: string | null
+}
+
+export interface SeriesActionResult {
+  series_id: string
+  affected: number
+}
+
+/** All sessions belonging to a recurrence series. */
+export async function listSeriesSessions(
+  seriesId: string,
+): Promise<SessionWithStats[]> {
+  const { data } = await api.get<SessionWithStats[]>(`/series/${seriesId}`)
+  return data
+}
+
+/** Apply common changes to all future sessions of a series. */
+export async function updateSeries(
+  seriesId: string,
+  payload: SeriesUpdatePayload,
+): Promise<SeriesActionResult> {
+  const { data } = await api.patch<SeriesActionResult>(
+    `/series/${seriesId}`,
+    payload,
+  )
+  return data
+}
+
+/** Cancel all future sessions of a series. */
+export async function cancelSeries(
+  seriesId: string,
+  reason?: string,
+): Promise<SeriesActionResult> {
+  const { data } = await api.post<SeriesActionResult>(
+    `/series/${seriesId}/cancel`,
+    { reason: reason || null },
+  )
+  return data
+}

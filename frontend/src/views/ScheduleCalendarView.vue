@@ -3,9 +3,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import SelectButton from 'primevue/selectbutton'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import DatePicker from 'primevue/datepicker'
+import Checkbox from 'primevue/checkbox'
 
 import { listSchedule, listCourses, bookSession, myBookings } from '@/api/me'
-import { cancelSession } from '@/api/courses'
+import { cancelSession, updateSeries, cancelSeries } from '@/api/courses'
 import { useAuthStore } from '@/stores/auth'
 import type { Booking, Course, SessionWithStats } from '@/types'
 
@@ -16,6 +22,13 @@ const isMember = computed(
   () => auth.user?.role === 'member' || auth.user?.role === 'trainee',
 )
 
+type ViewMode = 'week' | 'month'
+const viewMode = ref<ViewMode>('week')
+const viewOptions = computed(() => [
+  { label: t('calendar.week'), value: 'week' as ViewMode },
+  { label: t('calendar.month'), value: 'month' as ViewMode },
+])
+
 const sessions = ref<SessionWithStats[]>([])
 const courses = ref<Course[]>([])
 const bookedSessionIds = ref<Set<string>>(new Set())
@@ -24,8 +37,8 @@ const bookingId = ref<string | null>(null)
 const error = ref('')
 const info = ref('')
 
-/** Monday 00:00 of the currently displayed week. */
-const weekStart = ref<Date>(startOfWeek(new Date()))
+/** Start of the currently displayed period (Monday for week, 1st for month). */
+const periodStart = ref<Date>(startOfWeek(new Date()))
 
 function startOfWeek(d: Date): Date {
   const date = new Date(d)
@@ -35,34 +48,83 @@ function startOfWeek(d: Date): Date {
   return date
 }
 
+function startOfMonth(d: Date): Date {
+  const date = new Date(d.getFullYear(), d.getMonth(), 1)
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
 function addDays(d: Date, n: number): Date {
   const date = new Date(d)
   date.setDate(date.getDate() + n)
   return date
 }
 
-const weekEnd = computed(() => addDays(weekStart.value, 7))
+function addMonths(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1)
+}
+
+/** Number of days rendered in the grid. Month view rounds to full weeks. */
+const gridStart = computed(() =>
+  viewMode.value === 'week'
+    ? periodStart.value
+    : startOfWeek(startOfMonth(periodStart.value)),
+)
+
+const gridDayCount = computed(() => {
+  if (viewMode.value === 'week') return 7
+  // Weeks needed to cover the whole month, starting from the Monday grid start.
+  const monthStart = startOfMonth(periodStart.value)
+  const monthEnd = addMonths(monthStart, 1) // exclusive
+  const start = gridStart.value
+  const diffDays = Math.ceil(
+    (monthEnd.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+  )
+  return Math.ceil(diffDays / 7) * 7
+})
+
+/** Range fetched from the API (covers the whole visible grid). */
+const rangeStart = computed(() => gridStart.value)
+const rangeEnd = computed(() => addDays(gridStart.value, gridDayCount.value))
 
 const days = computed(() =>
-  Array.from({ length: 7 }, (_, i) => addDays(weekStart.value, i)),
+  Array.from({ length: gridDayCount.value }, (_, i) =>
+    addDays(gridStart.value, i),
+  ),
 )
 
 const dtfLocale = computed(() => (locale.value === 'de' ? 'de-DE' : 'en-US'))
 
-const weekLabel = computed(() => {
+const periodLabel = computed(() => {
+  if (viewMode.value === 'month') {
+    return startOfMonth(periodStart.value).toLocaleDateString(dtfLocale.value, {
+      month: 'long',
+      year: 'numeric',
+    })
+  }
   const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' }
-  const from = weekStart.value.toLocaleDateString(dtfLocale.value, opts)
-  const to = addDays(weekStart.value, 6).toLocaleDateString(dtfLocale.value, opts)
+  const from = periodStart.value.toLocaleDateString(dtfLocale.value, opts)
+  const to = addDays(periodStart.value, 6).toLocaleDateString(dtfLocale.value, opts)
   return `${from} – ${to}`
 })
 
 function dayLabel(d: Date): string {
-  return d.toLocaleDateString(dtfLocale.value, { weekday: 'short', day: '2-digit', month: '2-digit' })
+  return d.toLocaleDateString(dtfLocale.value, {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  })
 }
 
 function isToday(d: Date): boolean {
   const now = new Date()
   return d.toDateString() === now.toDateString()
+}
+
+/** In month view, days outside the current month are dimmed. */
+function isOutsideMonth(d: Date): boolean {
+  if (viewMode.value !== 'month') return false
+  return d.getMonth() !== startOfMonth(periodStart.value).getMonth()
 }
 
 const courseName = computed(() => {
@@ -95,8 +157,8 @@ async function load() {
       Promise<Booking[]> | Promise<[]>,
     ] = [
       listSchedule({
-        start: weekStart.value.toISOString(),
-        end: weekEnd.value.toISOString(),
+        start: rangeStart.value.toISOString(),
+        end: rangeEnd.value.toISOString(),
       }),
       listCourses(),
       isMember.value ? myBookings() : Promise.resolve([]),
@@ -116,18 +178,38 @@ async function load() {
   }
 }
 
-function prevWeek() {
-  weekStart.value = addDays(weekStart.value, -7)
+function changeView(mode: ViewMode) {
+  if (!mode || mode === viewMode.value) return
+  viewMode.value = mode
+  // Re-anchor the period start to the new mode around the same reference date.
+  periodStart.value =
+    mode === 'week'
+      ? startOfWeek(periodStart.value)
+      : startOfMonth(periodStart.value)
   load()
 }
 
-function nextWeek() {
-  weekStart.value = addDays(weekStart.value, 7)
+function prev() {
+  periodStart.value =
+    viewMode.value === 'week'
+      ? addDays(periodStart.value, -7)
+      : addMonths(periodStart.value, -1)
+  load()
+}
+
+function next() {
+  periodStart.value =
+    viewMode.value === 'week'
+      ? addDays(periodStart.value, 7)
+      : addMonths(periodStart.value, 1)
   load()
 }
 
 function goToday() {
-  weekStart.value = startOfWeek(new Date())
+  periodStart.value =
+    viewMode.value === 'week'
+      ? startOfWeek(new Date())
+      : startOfMonth(new Date())
   load()
 }
 
@@ -166,6 +248,94 @@ async function cancel(session: SessionWithStats) {
   }
 }
 
+// --- Series management (staff) ---
+const showSeriesDialog = ref(false)
+const savingSeries = ref(false)
+const seriesId = ref<string | null>(null)
+const seriesCourseName = ref('')
+const seriesForm = ref<{
+  time: Date | null
+  capacity: number | null
+  overrideLocation: boolean
+  is_online: boolean
+  location: string
+  online_url: string
+}>({
+  time: null,
+  capacity: null,
+  overrideLocation: false,
+  is_online: false,
+  location: '',
+  online_url: '',
+})
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function openSeriesDialog(s: SessionWithStats) {
+  if (!s.series_id) return
+  seriesId.value = s.series_id
+  seriesCourseName.value = courseName.value(s.course_id)
+  seriesForm.value = {
+    time: new Date(s.starts_at),
+    capacity: s.capacity,
+    overrideLocation: false,
+    is_online: !!s.effective_is_online,
+    location: s.effective_location ?? '',
+    online_url: s.effective_online_url ?? '',
+  }
+  showSeriesDialog.value = true
+}
+
+async function saveSeries() {
+  if (!seriesId.value) return
+  savingSeries.value = true
+  error.value = ''
+  info.value = ''
+  try {
+    const f = seriesForm.value
+    const payload: Record<string, unknown> = {}
+    if (f.time) {
+      payload.start_time = `${pad(f.time.getHours())}:${pad(f.time.getMinutes())}:00`
+    }
+    if (f.capacity != null) payload.capacity = f.capacity
+    if (f.overrideLocation) {
+      payload.is_online = f.is_online
+      payload.location = f.is_online ? null : f.location || null
+      payload.online_url = f.is_online ? f.online_url || null : null
+    }
+    const res = await updateSeries(seriesId.value, payload)
+    showSeriesDialog.value = false
+    info.value = t('calendar.series.updated', { count: res.affected })
+    await load()
+  } catch {
+    error.value = t('calendar.series.updateError')
+  } finally {
+    savingSeries.value = false
+  }
+}
+
+async function deleteSeries() {
+  if (!seriesId.value) return
+  if (!window.confirm(t('calendar.series.cancelConfirm'))) return
+  const reason = window.prompt(t('calendar.cancelPrompt'))
+  if (reason === null) return
+  savingSeries.value = true
+  error.value = ''
+  info.value = ''
+  try {
+    const res = await cancelSeries(seriesId.value, reason.trim() || undefined)
+    showSeriesDialog.value = false
+    info.value = t('calendar.series.cancelled', { count: res.affected })
+    await load()
+  } catch {
+    error.value = t('calendar.series.cancelError')
+  } finally {
+    savingSeries.value = false
+  }
+}
+
 function capacityOf(s: SessionWithStats): number {
   return s.capacity + s.overbooking_allowance
 }
@@ -181,11 +351,21 @@ onMounted(load)
   <div class="page">
     <div class="header">
       <h1>{{ t('calendar.title') }}</h1>
-      <div class="nav">
-        <Button icon="pi pi-chevron-left" text rounded @click="prevWeek" />
-        <Button :label="t('calendar.today')" text @click="goToday" />
-        <span class="week-label">{{ weekLabel }}</span>
-        <Button icon="pi pi-chevron-right" text rounded @click="nextWeek" />
+      <div class="controls">
+        <SelectButton
+          :modelValue="viewMode"
+          :options="viewOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          @update:modelValue="changeView"
+        />
+        <div class="nav">
+          <Button icon="pi pi-chevron-left" text rounded @click="prev" />
+          <Button :label="t('calendar.today')" text @click="goToday" />
+          <span class="week-label">{{ periodLabel }}</span>
+          <Button icon="pi pi-chevron-right" text rounded @click="next" />
+        </div>
       </div>
     </div>
 
@@ -193,8 +373,13 @@ onMounted(load)
     <p v-if="info" class="info">{{ info }}</p>
     <p v-if="loading">{{ t('common.loading') }}</p>
 
-    <div v-else class="grid">
-      <div v-for="d in days" :key="d.toISOString()" class="day" :class="{ today: isToday(d) }">
+    <div v-else class="grid" :class="`grid--${viewMode}`">
+      <div
+        v-for="d in days"
+        :key="d.toISOString()"
+        class="day"
+        :class="{ today: isToday(d), 'outside-month': isOutsideMonth(d) }"
+      >
         <div class="day-head">{{ dayLabel(d) }}</div>
         <div v-if="sessionsForDay(d).length === 0" class="empty">—</div>
         <div
@@ -249,20 +434,87 @@ onMounted(load)
             <span v-if="s.waitlist_count > 0" class="waitlist">
               · {{ t('calendar.waitlist', { count: s.waitlist_count }) }}
             </span>
-            <Button
-              v-if="!isPast(s)"
-              class="cancel-btn"
-              :label="t('calendar.cancel')"
-              icon="pi pi-times"
-              size="small"
-              severity="danger"
-              text
-              @click="cancel(s)"
-            />
+            <div class="slot-actions" v-if="!isPast(s)">
+              <Button
+                class="cancel-btn"
+                :label="t('calendar.cancel')"
+                icon="pi pi-times"
+                size="small"
+                severity="danger"
+                text
+                @click="cancel(s)"
+              />
+              <Button
+                v-if="s.series_id"
+                class="cancel-btn"
+                :label="t('calendar.series.manage')"
+                icon="pi pi-replay"
+                size="small"
+                text
+                @click="openSeriesDialog(s)"
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <Dialog
+      v-model:visible="showSeriesDialog"
+      :header="t('calendar.series.title')"
+      modal
+      :style="{ width: '440px' }"
+    >
+      <div class="form">
+        <p class="series-hint">
+          {{ t('calendar.series.scope', { course: seriesCourseName }) }}
+        </p>
+
+        <label>{{ t('calendar.series.time') }}</label>
+        <DatePicker v-model="seriesForm.time" timeOnly hourFormat="24" />
+
+        <label>{{ t('calendar.series.capacity') }}</label>
+        <InputNumber v-model="seriesForm.capacity" :min="1" showButtons />
+
+        <div class="checkbox-row">
+          <Checkbox v-model="seriesForm.overrideLocation" inputId="soverride" binary />
+          <label for="soverride" class="checkbox-label">
+            {{ t('calendar.series.changeLocation') }}
+          </label>
+        </div>
+        <template v-if="seriesForm.overrideLocation">
+          <div class="checkbox-row">
+            <Checkbox v-model="seriesForm.is_online" inputId="sonline" binary />
+            <label for="sonline" class="checkbox-label">{{ t('calendar.series.isOnline') }}</label>
+          </div>
+          <template v-if="seriesForm.is_online">
+            <label>{{ t('calendar.series.onlineUrl') }}</label>
+            <InputText v-model="seriesForm.online_url" placeholder="https://…" />
+          </template>
+          <template v-else>
+            <label>{{ t('calendar.series.location') }}</label>
+            <InputText v-model="seriesForm.location" />
+          </template>
+        </template>
+      </div>
+      <template #footer>
+        <Button
+          :label="t('calendar.series.cancelSeries')"
+          icon="pi pi-trash"
+          severity="danger"
+          text
+          :loading="savingSeries"
+          @click="deleteSeries"
+        />
+        <span class="footer-spacer" />
+        <Button :label="t('calendar.series.close')" text @click="showSeriesDialog = false" />
+        <Button
+          :label="t('calendar.series.save')"
+          :loading="savingSeries"
+          @click="saveSeries"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -283,6 +535,12 @@ onMounted(load)
   align-items: center;
   gap: 0.25rem;
 }
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 .week-label {
   font-weight: 600;
   min-width: 9rem;
@@ -299,6 +557,15 @@ onMounted(load)
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 1rem;
+}
+.grid--month .day {
+  min-height: 5.5rem;
+}
+.grid--month .slot {
+  font-size: 0.8rem;
+}
+.day.outside-month {
+  opacity: 0.5;
 }
 .day {
   background: #f8fafc;
@@ -382,6 +649,38 @@ onMounted(load)
   margin-top: 0.25rem;
   align-self: flex-start;
   padding: 0;
+}
+.slot-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.form label {
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.checkbox-label {
+  font-weight: 600;
+  margin-top: 0;
+}
+.series-hint {
+  color: #6b7280;
+  font-size: 0.88rem;
+  margin: 0;
+}
+.footer-spacer {
+  flex: 1;
 }
 @media (max-width: 900px) {
   .grid {

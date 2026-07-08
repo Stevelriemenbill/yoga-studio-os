@@ -141,6 +141,11 @@ const router = createRouter({
           component: () => import('@/views/member/MyBookingsView.vue'),
         },
         {
+          path: 'me/history',
+          name: 'my-history',
+          component: () => import('@/views/member/MyHistoryView.vue'),
+        },
+        {
           path: 'me/pass',
           name: 'my-pass',
           component: () => import('@/views/member/MyPassView.vue'),

@@ -24,9 +24,11 @@ from app.schemas.booking import BookingRead
 from app.schemas.checkin import MemberPassRead
 from app.schemas.event import EventRead, EventRegistrationRead
 from app.schemas.member import MemberRead
+from app.schemas.participation import ParticipationHistory
 from app.services import booking as booking_service
 from app.services import event as event_service
 from app.services import integrations as integrations_service
+from app.services import participation as participation_service
 from app.services import waitlist as waitlist_service
 from app.services.booking import BookingError, BookingRepository
 from app.services.checkin import member_qr_token
@@ -54,6 +56,17 @@ async def my_bookings(
 ):
     """All of the current member's bookings, newest session first."""
     return await BookingRepository(db, member.tenant_id).for_member(member.id)
+
+
+@router.get("/participation", response_model=ParticipationHistory)
+async def my_participation(
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Which sessions the member attended and their accumulated hours."""
+    return await participation_service.participation_history(
+        db, member.tenant_id, member.id
+    )
 
 
 async def _get_own_session(

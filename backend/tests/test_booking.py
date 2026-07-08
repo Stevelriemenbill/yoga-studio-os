@@ -361,3 +361,110 @@ async def test_tenant_isolation(client):
     # Tenant B cannot see tenant A's member
     resp = await client.get(f"/api/v1/members/{member_a['id']}", headers=headers_b)
     assert resp.status_code == 404
+
+
+async def _schedule_series(client, headers, course_id, **overrides):
+    payload = {
+        "course_id": course_id,
+        "weekdays": [0, 2],  # Mon, Wed
+        "start_time": "18:00:00",
+        "start_date": "2030-01-07",  # a Monday
+        "end_date": "2030-01-20",
+        **overrides,
+    }
+    resp = await client.post(
+        f"/api/v1/courses/{course_id}/schedule", json=payload, headers=headers
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+@pytest.mark.asyncio
+async def test_schedule_assigns_shared_series_id(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    sessions = await _schedule_series(client, headers, course["id"])
+    series_ids = {s["series_id"] for s in sessions}
+    assert len(series_ids) == 1
+    assert None not in series_ids
+
+
+@pytest.mark.asyncio
+async def test_list_series_sessions(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    sessions = await _schedule_series(client, headers, course["id"])
+    series_id = sessions[0]["series_id"]
+
+    resp = await client.get(f"/api/v1/series/{series_id}", headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert len(resp.json()) == len(sessions)
+
+
+@pytest.mark.asyncio
+async def test_update_series_time_and_capacity(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+    sessions = await _schedule_series(client, headers, course["id"])
+    series_id = sessions[0]["series_id"]
+
+    resp = await client.patch(
+        f"/api/v1/series/{series_id}",
+        json={"start_time": "07:30:00", "capacity": 12},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["affected"] == len(sessions)
+
+    updated = (await client.get(f"/api/v1/series/{series_id}", headers=headers)).json()
+    for s in updated:
+        assert s["starts_at"].endswith("07:30:00")
+        assert s["capacity"] == 12
+        # 60-minute course => ends 08:30.
+        assert s["ends_at"].endswith("08:30:00")
+
+
+@pytest.mark.asyncio
+async def test_cancel_series_cancels_future_and_bookings(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers, max_participants=5)
+    sessions = await _schedule_series(client, headers, course["id"])
+    series_id = sessions[0]["series_id"]
+
+    member = await _make_member(client, headers)
+    booking = await client.post(
+        "/api/v1/bookings",
+        json={"session_id": sessions[0]["id"], "member_id": member["id"]},
+        headers=headers,
+    )
+    assert booking.status_code == 201, booking.text
+
+    resp = await client.post(
+        f"/api/v1/series/{series_id}/cancel",
+        json={"reason": "Studio Umbau"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["affected"] == len(sessions)
+
+    # All sessions in the series are cancelled.
+    remaining = (await client.get(f"/api/v1/series/{series_id}", headers=headers)).json()
+    assert all(s["status"] == "cancelled" for s in remaining)
+
+    # The booking on the first session was cancelled and a notification queued.
+    notes = (await client.get("/api/v1/notifications", headers=headers)).json()
+    assert any(n.get("template") == "session_cancelled" for n in notes)
+
+
+@pytest.mark.asyncio
+async def test_series_not_found(client):
+    headers = await _auth_headers(client)
+    missing = "00000000-0000-0000-0000-000000000000"
+    assert (
+        await client.get(f"/api/v1/series/{missing}", headers=headers)
+    ).status_code == 404
+    assert (
+        await client.patch(
+            f"/api/v1/series/{missing}", json={"capacity": 5}, headers=headers
+        )
+    ).status_code == 404

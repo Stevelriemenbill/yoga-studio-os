@@ -19,9 +19,11 @@ import {
   type Message,
 } from '@/api/messages'
 import { useAuthStore } from '@/stores/auth'
+import { useMessages } from '@/stores/messages'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
+const { refreshUnread } = useMessages()
 
 const conversations = ref<Conversation[]>([])
 const contacts = ref<Contact[]>([])
@@ -68,6 +70,8 @@ async function loadConversations() {
   error.value = ''
   try {
     conversations.value = await listConversations()
+    // Keep the sidebar badge in sync with the freshly loaded state.
+    await refreshUnread()
   } catch {
     error.value = t('messages.errors.loadFailed')
   } finally {
@@ -83,6 +87,8 @@ async function openConversation(c: Conversation) {
     if (c.unread_count > 0) {
       await markConversationRead(c.id)
       c.unread_count = 0
+      // Update the sidebar badge immediately, not only on the next poll.
+      await refreshUnread()
     }
   } catch {
     error.value = t('messages.errors.loadFailed')
