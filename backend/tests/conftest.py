@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 # Force an in-memory-ish sqlite DB for tests before app imports.
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -6,6 +7,10 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-do-not-use-in-prod")
 # Disable Redis-backed features (worker/pubsub) in tests.
 os.environ.setdefault("REDIS_ENABLED", "false")
 os.environ.setdefault("METRICS_ENABLED", "false")
+# Write uploaded files to a throwaway temp dir during tests.
+os.environ.setdefault(
+    "MEDIA_ROOT", os.path.join(tempfile.gettempdir(), "studioos-test-media")
+)
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient

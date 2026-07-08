@@ -1,16 +1,27 @@
 import uuid
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, require_staff
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.booking import Booking, BookingStatus
+from app.models.course import CourseAttachment
 from app.models.session import CourseSession
 from app.models.waitlist import WaitlistEntry, WaitlistStatus
 from app.schemas.course import (
+    CourseAttachmentRead,
     CourseCreate,
     CourseRead,
     CourseUpdate,
@@ -24,7 +35,9 @@ from app.schemas.course import (
     SessionWithStats,
 )
 from app.services import course as course_service
+from app.services import storage
 from app.services.course import (
+    CourseAttachmentRepository,
     CourseRepository,
     RoomRepository,
     SessionRepository,
@@ -107,6 +120,81 @@ async def delete_course(
     if course is None:
         raise HTTPException(status_code=404, detail="Course not found")
     await repo.delete(course)
+    await db.commit()
+
+
+# --- Course attachments ---
+def _attachment_read(att: CourseAttachment) -> CourseAttachmentRead:
+    read = CourseAttachmentRead.model_validate(att)
+    read.url = storage.course_file_url(att.tenant_id, att.course_id, att.stored_name)
+    return read
+
+
+@router.get("/{course_id}/attachments", response_model=list[CourseAttachmentRead])
+async def list_course_attachments(
+    course_id: uuid.UUID,
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if await CourseRepository(db, current.tenant_id).get(course_id) is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+    atts = await CourseAttachmentRepository(db, current.tenant_id).for_course(course_id)
+    return [_attachment_read(a) for a in atts]
+
+
+@router.post(
+    "/{course_id}/attachments",
+    response_model=CourseAttachmentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_course_attachment(
+    course_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    if await CourseRepository(db, current.tenant_id).get(course_id) is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    content = await file.read()
+    if len(content) > settings.MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large")
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    stored_name, _rel = storage.save_course_file(
+        current.tenant_id, course_id, file.filename or "upload", content
+    )
+    att = CourseAttachmentRepository(db, current.tenant_id).add(
+        CourseAttachment(
+            course_id=course_id,
+            filename=file.filename or "upload",
+            stored_name=stored_name,
+            content_type=file.content_type,
+            size_bytes=len(content),
+        )
+    )
+    await db.commit()
+    await db.refresh(att)
+    return _attachment_read(att)
+
+
+@router.delete(
+    "/{course_id}/attachments/{attachment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_course_attachment(
+    course_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    repo = CourseAttachmentRepository(db, current.tenant_id)
+    att = await repo.get(attachment_id)
+    if att is None or att.course_id != course_id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    storage.delete_course_file(current.tenant_id, course_id, att.stored_name)
+    await repo.delete(att)
     await db.commit()
 
 

@@ -43,10 +43,12 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       REDIS_URL: redis://redis:6379/0
       BACKEND_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      MEDIA_ROOT: /app/media
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - media:/app/media
 
   worker:
     build: ./backend
@@ -82,3 +84,4 @@ services:
 
 volumes:
   pgdata:
+  media:

@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import api_router, realtime
 from app.core.config import settings
@@ -38,6 +40,13 @@ def create_app() -> FastAPI:
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
     app.include_router(realtime.router, prefix=settings.API_V1_PREFIX)
+
+    # Serve uploaded files from the local media volume.
+    media_root = Path(settings.MEDIA_ROOT)
+    media_root.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        settings.MEDIA_URL, StaticFiles(directory=str(media_root)), name="media"
+    )
 
     # Prometheus metrics at /metrics (opt-in; skipped if lib unavailable).
     if settings.METRICS_ENABLED:

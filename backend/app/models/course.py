@@ -53,6 +53,19 @@ class Course(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     min_participants: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     duration_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
 
+    #: Default location for this course. A concrete session may override it.
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    #: Whether the course is held online by default.
+    is_online: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    #: Meeting link for online courses (e.g. Zoom URL).
+    online_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    #: Free-form registration / preparation info shown to members
+    #: (e.g. how to register, what to bring, access details).
+    registration_info: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     #: Whether attendance of this course's sessions counts toward
@@ -67,3 +80,29 @@ class Course(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    attachments: Mapped[list["CourseAttachment"]] = relationship(
+        back_populates="course",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class CourseAttachment(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
+    """A file attached to a course (e.g. registration info PDF)."""
+
+    __tablename__ = "course_attachments"
+
+    course_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    #: Original filename as uploaded.
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    #: Stored filename on disk (relative to the media directory).
+    stored_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    course: Mapped["Course"] = relationship(back_populates="attachments")

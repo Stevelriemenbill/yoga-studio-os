@@ -44,6 +44,10 @@ class CourseCreate(BaseModel):
     min_participants: int = Field(default=1, ge=0)
     duration_minutes: int = Field(default=60, ge=1)
     counts_for_training: bool = False
+    location: str | None = Field(default=None, max_length=255)
+    is_online: bool = False
+    online_url: str | None = Field(default=None, max_length=500)
+    registration_info: str | None = None
 
 
 class CourseUpdate(BaseModel):
@@ -58,6 +62,10 @@ class CourseUpdate(BaseModel):
     duration_minutes: int | None = Field(default=None, ge=1)
     is_active: bool | None = None
     counts_for_training: bool | None = None
+    location: str | None = Field(default=None, max_length=255)
+    is_online: bool | None = None
+    online_url: str | None = Field(default=None, max_length=500)
+    registration_info: str | None = None
 
 
 class CourseRead(BaseModel):
@@ -75,6 +83,23 @@ class CourseRead(BaseModel):
     duration_minutes: int
     is_active: bool
     counts_for_training: bool
+    location: str | None
+    is_online: bool
+    online_url: str | None
+    registration_info: str | None
+
+
+# --- Course attachments ---
+class CourseAttachmentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    course_id: uuid.UUID
+    filename: str
+    content_type: str | None
+    size_bytes: int
+    created_at: datetime
+    url: str | None = None
 
 
 # --- Session ---
@@ -84,6 +109,9 @@ class SessionCreate(BaseModel):
     teacher_id: uuid.UUID | None = None
     room_id: uuid.UUID | None = None
     capacity: int | None = Field(default=None, ge=1)
+    location: str | None = Field(default=None, max_length=255)
+    is_online: bool | None = None
+    online_url: str | None = Field(default=None, max_length=500)
 
 
 class RecurrenceSchedule(BaseModel):
@@ -127,6 +155,9 @@ class SessionUpdate(BaseModel):
     overbooking_allowance: int | None = Field(default=None, ge=0)
     status: SessionStatus | None = None
     cancellation_reason: str | None = None
+    location: str | None = Field(default=None, max_length=255)
+    is_online: bool | None = None
+    online_url: str | None = Field(default=None, max_length=500)
 
 
 class SessionCancel(BaseModel):
@@ -146,6 +177,14 @@ class SessionRead(BaseModel):
     overbooking_allowance: int
     status: SessionStatus
     cancellation_reason: str | None = None
+    # Raw per-session overrides (None = inherit from course).
+    location: str | None = None
+    is_online: bool | None = None
+    online_url: str | None = None
+    # Resolved effective values (session override, else course default).
+    effective_location: str | None = None
+    effective_is_online: bool = False
+    effective_online_url: str | None = None
 
 
 class SessionWithStats(SessionRead):

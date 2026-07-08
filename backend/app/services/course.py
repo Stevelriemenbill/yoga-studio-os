@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repository import TenantRepository
-from app.models.course import Course, Room
+from app.models.course import Course, CourseAttachment, Room
 from app.models.session import CourseSession, SessionStatus
 from app.schemas.course import (
     MAX_RECURRENCE_SESSIONS,
@@ -25,6 +25,18 @@ class RoomRepository(TenantRepository[Room]):
 
 class CourseRepository(TenantRepository[Course]):
     model = Course
+
+
+class CourseAttachmentRepository(TenantRepository[CourseAttachment]):
+    model = CourseAttachment
+
+    async def for_course(self, course_id: uuid.UUID) -> list[CourseAttachment]:
+        result = await self.db.execute(
+            self._base_query()
+            .where(CourseAttachment.course_id == course_id)
+            .order_by(CourseAttachment.created_at)
+        )
+        return list(result.scalars().all())
 
 
 class SessionRepository(TenantRepository[CourseSession]):
@@ -102,6 +114,9 @@ async def create_session(
             starts_at=data.starts_at,
             ends_at=data.starts_at + timedelta(minutes=course.duration_minutes),
             capacity=capacity,
+            location=data.location,
+            is_online=data.is_online,
+            online_url=data.online_url,
         )
     )
     await db.commit()

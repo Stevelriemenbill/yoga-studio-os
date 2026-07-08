@@ -6,7 +6,7 @@ from app.models.checkin import (
     CheckIn,
     CheckInMethod,
 )
-from app.models.course import Course, CourseLevel, Room
+from app.models.course import Course, CourseAttachment, CourseLevel, Room
 from app.models.event import (
     Event,
     EventRegistration,
@@ -45,6 +45,7 @@ __all__ = [
     "Room",
     "Course",
     "CourseLevel",
+    "CourseAttachment",
     "CourseSession",
     "SessionStatus",
     "Member",

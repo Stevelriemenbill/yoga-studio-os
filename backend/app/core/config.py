@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     SENTRY_DSN: str | None = None
     METRICS_ENABLED: bool = True
 
+    # Media / file uploads (stored on a local volume, served via StaticFiles).
+    MEDIA_ROOT: str = "/app/media"
+    MEDIA_URL: str = "/media"
+    #: Max upload size in bytes (default 10 MB).
+    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024
+
     # CORS — comma-separated string (avoids pydantic-settings JSON coercion of
     # list fields from env vars). Use the `cors_origins` property to consume.
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"

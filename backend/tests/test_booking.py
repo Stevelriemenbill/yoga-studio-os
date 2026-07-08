@@ -278,6 +278,74 @@ async def test_cancel_session_cancels_bookings_and_notifies(client):
 
 
 @pytest.mark.asyncio
+async def test_session_inherits_and_overrides_location(client):
+    """A session inherits the course location/online unless it overrides."""
+    headers = await _auth_headers(client)
+    course = await _make_course(
+        client,
+        headers,
+        location="Studio Raum 1",
+        is_online=False,
+    )
+    # Session without overrides -> inherits course location.
+    s1 = await _make_session(client, headers, course["id"])
+    assert s1["effective_location"] == "Studio Raum 1"
+    assert s1["effective_is_online"] is False
+
+    # Session with online override.
+    resp = await client.post(
+        f"/api/v1/courses/{course['id']}/sessions",
+        json={
+            "course_id": course["id"],
+            "starts_at": "2030-02-01T18:00:00",
+            "is_online": True,
+            "online_url": "https://zoom.us/j/123",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    s2 = resp.json()
+    assert s2["effective_is_online"] is True
+    assert s2["effective_online_url"] == "https://zoom.us/j/123"
+    # Raw override recorded, course location still inherited for location.
+    assert s2["is_online"] is True
+    assert s2["effective_location"] == "Studio Raum 1"
+
+
+@pytest.mark.asyncio
+async def test_course_attachment_upload_list_delete(client):
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers)
+
+    up = await client.post(
+        f"/api/v1/courses/{course['id']}/attachments",
+        files={"file": ("info.txt", b"Anmeldeinfos hier", "text/plain")},
+        headers=headers,
+    )
+    assert up.status_code == 201, up.text
+    att = up.json()
+    assert att["filename"] == "info.txt"
+    assert att["size_bytes"] == len(b"Anmeldeinfos hier")
+    assert att["url"].startswith("/media/courses/")
+
+    lst = await client.get(
+        f"/api/v1/courses/{course['id']}/attachments", headers=headers
+    )
+    assert lst.status_code == 200
+    assert len(lst.json()) == 1
+
+    dele = await client.delete(
+        f"/api/v1/courses/{course['id']}/attachments/{att['id']}", headers=headers
+    )
+    assert dele.status_code == 204
+
+    lst2 = await client.get(
+        f"/api/v1/courses/{course['id']}/attachments", headers=headers
+    )
+    assert lst2.json() == []
+
+
+@pytest.mark.asyncio
 async def test_tenant_isolation(client):
     """A member from tenant A must not be visible/bookable in tenant B."""
     headers_a = await _auth_headers(client)
