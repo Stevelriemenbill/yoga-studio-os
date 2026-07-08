@@ -36,6 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: 'nav.groups.operations',
     items: [
+      { labelKey: 'nav.calendar', icon: 'pi pi-calendar', to: '/calendar', hintKey: 'nav.hints.calendar' },
       { labelKey: 'nav.schedule', icon: 'pi pi-calendar', to: '/courses', roles: STAFF, hintKey: 'nav.hints.schedule' },
       { labelKey: 'nav.bookings', icon: 'pi pi-ticket', to: '/bookings', roles: STAFF, hintKey: 'nav.hints.bookings' },
       { labelKey: 'nav.checkin', icon: 'pi pi-qrcode', to: '/checkin', roles: STAFF, hintKey: 'nav.hints.checkin' },

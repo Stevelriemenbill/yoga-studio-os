@@ -38,8 +38,11 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
+    const start = new Date()
+    const end = new Date()
+    end.setDate(end.getDate() + 30)
     const [sched, crs, mine] = await Promise.all([
-      listSchedule(),
+      listSchedule({ start: start.toISOString(), end: end.toISOString() }),
       listCourses(),
       myBookings(),
     ])

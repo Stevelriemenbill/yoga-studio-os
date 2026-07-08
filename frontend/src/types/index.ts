@@ -104,6 +104,7 @@ export interface CourseSession {
 
 export interface SessionWithStats extends CourseSession {
   ends_at: string
+  capacity: number
   overbooking_allowance: number
   booked_count: number
   waitlist_count: number
