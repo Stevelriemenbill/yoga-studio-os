@@ -43,6 +43,9 @@ async def test_invite_member_returns_link(client):
     data = resp.json()
     assert data["token"]
     assert "/invite/" in data["invite_url"]
+    # No SMTP configured in dev/tests: no real email was sent, so the caller
+    # must be told to surface the link instead of implying delivery.
+    assert data["email_delivered"] is False
 
 
 @pytest.mark.asyncio

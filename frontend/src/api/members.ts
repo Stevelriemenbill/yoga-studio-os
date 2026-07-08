@@ -42,6 +42,7 @@ export async function deleteMember(id: string): Promise<void> {
 export interface InviteResult {
   invite_url: string
   token: string
+  email_delivered: boolean
 }
 
 export async function inviteMember(id: string): Promise<InviteResult> {

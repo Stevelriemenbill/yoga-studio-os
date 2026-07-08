@@ -75,6 +75,10 @@ class InviteResult(BaseModel):
 
     invite_url: str
     token: str
+    #: ``True`` only if a real email was actually delivered. In development
+    #: (no SMTP configured) this is ``False`` and the UI should share the
+    #: ``invite_url`` manually instead of implying an email was sent.
+    email_delivered: bool = False
 
 
 class InvitedMember(BaseModel):

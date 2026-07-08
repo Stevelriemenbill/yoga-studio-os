@@ -67,10 +67,14 @@ async def invite_member(
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
     try:
-        token, url = await auth_service.invite_member(db, current.tenant_id, member)
+        token, url, email_delivered = await auth_service.invite_member(
+            db, current.tenant_id, member
+        )
     except auth_service.AuthError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return InviteResult(invite_url=url, token=token)
+    return InviteResult(
+        invite_url=url, token=token, email_delivered=email_delivered
+    )
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -7,13 +7,20 @@ providers (WhatsApp Business API, web-push, SMTP) plug in here.
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 
 from app.models.notification import Notification, NotificationChannel
 
+logger = logging.getLogger(__name__)
+
 
 class ChannelSender(ABC):
     channel: NotificationChannel
+    #: Whether this sender actually delivers to a real external provider.
+    #: Development placeholders leave this ``False`` so callers can avoid
+    #: implying a message was really sent.
+    delivers_real_email: bool = False
 
     @abstractmethod
     async def send(self, notification: Notification) -> None: ...
@@ -21,9 +28,16 @@ class ChannelSender(ABC):
 
 class ConsoleEmailSender(ChannelSender):
     channel = NotificationChannel.EMAIL
+    delivers_real_email = False
 
     async def send(self, notification: Notification) -> None:
-        # Placeholder for SMTP / provider. No-op in dev.
+        # Placeholder for SMTP / provider. No real email is sent in dev;
+        # the invitation link is surfaced in the UI instead. Log for debugging.
+        logger.info(
+            "Email notification %s not delivered (no SMTP configured): %s",
+            notification.id,
+            notification.subject,
+        )
         return None
 
 

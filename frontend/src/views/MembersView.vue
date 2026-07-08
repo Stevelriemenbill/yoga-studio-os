@@ -137,15 +137,24 @@ async function invite(m: Member) {
   }
   inviting.value = m.id
   try {
-    const { invite_url } = await inviteMember(m.id)
-    try {
-      await navigator.clipboard.writeText(invite_url)
-      notice.value = `Einladung an ${m.email} versendet. Link in die Zwischenablage kopiert.`
-    } catch {
-      notice.value = `Einladung an ${m.email} versendet: ${invite_url}`
+    const { invite_url, email_delivered } = await inviteMember(m.id)
+    if (email_delivered) {
+      notice.value = `Einladung per E-Mail an ${m.email} versendet.`
+    } else {
+      // Kein echter Mailversand konfiguriert: Link ehrlich anzeigen.
+      try {
+        await navigator.clipboard.writeText(invite_url)
+        notice.value =
+          `Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). ` +
+          `Einladungslink für ${m.email} wurde in die Zwischenablage kopiert: ${invite_url}`
+      } catch {
+        notice.value =
+          `Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). ` +
+          `Bitte diesen Einladungslink an ${m.email} weitergeben: ${invite_url}`
+      }
     }
   } catch {
-    error.value = 'Einladung konnte nicht versendet werden.'
+    error.value = 'Einladung konnte nicht erstellt werden.'
   } finally {
     inviting.value = null
   }

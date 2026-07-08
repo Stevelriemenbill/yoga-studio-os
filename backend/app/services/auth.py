@@ -14,11 +14,12 @@ from app.core.security import (
     verify_password,
 )
 from app.models.member import Member
-from app.models.notification import NotificationChannel
+from app.models.notification import NotificationChannel, NotificationStatus
 from app.models.tenant import Tenant
 from app.models.user import User, UserRole
 from app.schemas.auth import StudioRegistration, Token
 from app.services import notification as notification_service
+from app.services.channels import get_sender
 
 
 class AuthError(Exception):
@@ -93,11 +94,17 @@ async def authenticate(
 
 async def invite_member(
     db: AsyncSession, tenant_id, member: Member
-) -> tuple[str, str]:
+) -> tuple[str, str, bool]:
     """Create an invitation for a member to claim a login account.
 
-    Returns (token, invite_url). Sends an email notification if the member
-    has an address on file.
+    Returns ``(token, invite_url, email_delivered)``. The invitation
+    notification is delivered immediately (not left for the background worker),
+    so callers know right away whether an email actually went out.
+
+    ``email_delivered`` is ``True`` only if a real email provider is configured
+    and accepted the message. In development (no SMTP configured) it is
+    ``False`` and the caller should surface the ``invite_url`` directly instead
+    of implying an email was sent.
     """
     if member.email is None:
         raise AuthError("Member has no email address to invite")
@@ -107,7 +114,7 @@ async def invite_member(
     token = create_invite_token(str(member.id), str(tenant_id))
     invite_url = f"{settings.FRONTEND_URL.rstrip('/')}/invite/{token}"
 
-    await notification_service.enqueue(
+    notification = await notification_service.enqueue(
         db,
         tenant_id,
         channel=NotificationChannel.EMAIL,
@@ -122,7 +129,15 @@ async def invite_member(
         ),
         template="member_invite",
     )
-    return token, invite_url
+
+    # Deliver right away instead of waiting for the ARQ worker, so the UI can
+    # report the true outcome.
+    delivered = await notification_service.deliver(db, notification)
+    email_delivered = (
+        delivered.status == NotificationStatus.SENT
+        and get_sender(NotificationChannel.EMAIL).delivers_real_email
+    )
+    return token, invite_url, email_delivered
 
 
 async def get_invited_member(db: AsyncSession, token: str) -> Member:
