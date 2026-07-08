@@ -18,6 +18,7 @@ from app.schemas.auth import (
     AcceptInviteRequest,
     AcceptInviteResult,
     InvitedMember,
+    InvitedStaff,
     LoginRequest,
     MeRead,
     RefreshRequest,
@@ -192,6 +193,49 @@ async def accept_invite(
     """Public: consume an invite, create the member's login and auto-login."""
     try:
         user = await auth_service.accept_invite(db, data.token, data.password)
+    except auth_service.AuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    return AcceptInviteResult(
+        user=UserRead.model_validate(user),
+        token=auth_service.issue_tokens(user),
+    )
+
+
+@router.get("/staff-invite/{token}", response_model=InvitedStaff)
+async def preview_staff_invite(
+    token: str, db: AsyncSession = Depends(get_db)
+) -> InvitedStaff:
+    """Public: validate a staff invitation and return details to prefill the form."""
+    try:
+        invite = await auth_service.get_staff_invite(db, token)
+    except auth_service.AuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    tenant = await db.get(Tenant, invite.tenant_id)
+    return InvitedStaff(
+        email=invite.email,
+        full_name=invite.full_name,
+        role=invite.role,
+        studio_name=tenant.name if tenant else "",
+    )
+
+
+@router.post(
+    "/staff-invite/accept",
+    response_model=AcceptInviteResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def accept_staff_invite(
+    data: AcceptInviteRequest, db: AsyncSession = Depends(get_db)
+) -> AcceptInviteResult:
+    """Public: consume a staff invite, create the staff login and auto-login."""
+    try:
+        user = await auth_service.accept_staff_invite(db, data.token, data.password)
     except auth_service.AuthError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)

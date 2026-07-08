@@ -62,3 +62,28 @@ export async function acceptInvite(
   })
   return data
 }
+
+export interface InvitedStaff {
+  email: string
+  full_name: string | null
+  role: string
+  studio_name: string
+}
+
+export async function previewStaffInvite(token: string): Promise<InvitedStaff> {
+  const { data } = await api.get<InvitedStaff>(
+    `/auth/staff-invite/${encodeURIComponent(token)}`,
+  )
+  return data
+}
+
+export async function acceptStaffInvite(
+  token: string,
+  password: string,
+): Promise<AcceptInviteResult> {
+  const { data } = await api.post<AcceptInviteResult>(
+    '/auth/staff-invite/accept',
+    { token, password },
+  )
+  return data
+}

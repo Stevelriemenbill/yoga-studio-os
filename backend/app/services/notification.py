@@ -43,6 +43,7 @@ async def enqueue(
     subject: str | None = None,
     scheduled_for: datetime | None = None,
     template: str | None = None,
+    recipient_email: str | None = None,
 ) -> Notification:
     repo = NotificationRepository(db, tenant_id)
     notification = repo.add(
@@ -58,11 +59,36 @@ async def enqueue(
     )
     await db.commit()
     await db.refresh(notification)
+    # Transient (non-persisted) recipient address used by real email senders.
+    if recipient_email is not None:
+        notification.recipient_email = recipient_email
     return notification
+
+
+async def _resolve_recipient_email(
+    db: AsyncSession, notification: Notification
+) -> str | None:
+    """Best-effort resolve an email address for an EMAIL notification."""
+    existing = getattr(notification, "recipient_email", None)
+    if existing:
+        return existing
+    if notification.member_id is not None:
+        member = (
+            await db.execute(
+                select(Member).where(Member.id == notification.member_id)
+            )
+        ).scalar_one_or_none()
+        if member and member.email:
+            return member.email
+    return None
 
 
 async def deliver(db: AsyncSession, notification: Notification) -> Notification:
     try:
+        if notification.channel == NotificationChannel.EMAIL:
+            notification.recipient_email = await _resolve_recipient_email(
+                db, notification
+            )
         await get_sender(notification.channel).send(notification)
         notification.status = NotificationStatus.SENT
         notification.sent_at = datetime.now(UTC)

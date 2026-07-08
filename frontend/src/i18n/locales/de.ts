@@ -37,6 +37,11 @@ export default {
       passwordMismatch: 'Die Passwörter stimmen nicht überein.',
       activateFailed: 'Konto konnte nicht aktiviert werden.',
     },
+    staffInvite: {
+      title: 'Team-Konto aktivieren',
+      welcome:
+        '{studio} lädt dich als {role} ins Team ein. Lege ein Passwort fest, um dein Konto zu aktivieren.',
+    },
   },
   roles: {
     studio_admin: 'Studio-Admin',
@@ -63,6 +68,7 @@ export default {
     events: 'Events',
     members: 'Mitglieder',
     training: 'Ausbildung',
+    team: 'Team',
     care: 'Fürsorge',
     assistant: 'Begleiter:in',
     community: 'Gemeinschaft',
@@ -82,6 +88,7 @@ export default {
       events: 'Workshops & Retreats',
       members: 'Kartei & Guthaben',
       training: 'Trainees begleiten',
+      team: 'Lehrkräfte & Team einladen',
       care: 'Wer braucht gerade Aufmerksamkeit',
       assistant: 'Fragen zur Begleitung deiner Schüler:innen',
       community: 'Sanfter Puls der Gemeinschaft',
@@ -556,6 +563,51 @@ export default {
       deleteFailed: 'Mitglied konnte nicht gelöscht werden.',
       inviteFailed: 'Einladung konnte nicht erstellt werden.',
       noEmail: '{name} hat keine E-Mail-Adresse hinterlegt.',
+    },
+  },
+  users: {
+    title: 'Team',
+    subtitle: 'Lehrkräfte und Team-Mitglieder einladen und verwalten.',
+    inviteButton: 'Person einladen',
+    loading: 'Wird geladen…',
+    revoke: 'Zurückziehen',
+    confirmRevoke: 'Einladung an {email} zurückziehen?',
+    roles: {
+      teacher: 'Lehrkraft',
+      studio_manager: 'Manager',
+      reception: 'Empfang',
+    },
+    status: {
+      active: 'Aktiv',
+      inactive: 'Inaktiv',
+      pending: 'Eingeladen',
+    },
+    columns: {
+      name: 'Name',
+      email: 'E-Mail',
+      role: 'Rolle',
+      status: 'Status',
+      actions: 'Aktionen',
+    },
+    dialog: {
+      title: 'Ins Team einladen',
+    },
+    form: {
+      email: 'E-Mail',
+      fullName: 'Name (optional)',
+      role: 'Rolle',
+      cancel: 'Abbrechen',
+      send: 'Einladung senden',
+    },
+    invite: {
+      emailSent: 'Einladung per E-Mail an {email} versendet.',
+      copiedToClipboard: 'Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). Einladungslink für {email} wurde in die Zwischenablage kopiert: {url}',
+      shareManually: 'Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). Bitte diesen Einladungslink an {email} weitergeben: {url}',
+    },
+    errors: {
+      loadFailed: 'Team konnte nicht geladen werden.',
+      inviteFailed: 'Einladung konnte nicht erstellt werden.',
+      revokeFailed: 'Einladung konnte nicht zurückgezogen werden.',
     },
   },
   notifications: {

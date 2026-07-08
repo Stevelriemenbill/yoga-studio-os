@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -144,3 +145,71 @@ class AcceptInviteRequest(BaseModel):
 class AcceptInviteResult(BaseModel):
     user: UserRead
     token: Token
+
+
+# --- Staff invitations -----------------------------------------------------
+
+#: Roles a studio admin may invite as staff. MEMBER/TRAINEE use the member
+#: invite flow instead; STUDIO_ADMIN is created only at studio registration.
+STAFF_INVITE_ROLES = frozenset(
+    {
+        UserRole.STUDIO_MANAGER,
+        UserRole.TEACHER,
+        UserRole.RECEPTION,
+    }
+)
+
+
+class StaffInviteCreate(BaseModel):
+    email: EmailStr
+    full_name: str | None = Field(default=None, max_length=255)
+    role: UserRole
+
+    @field_validator("role")
+    @classmethod
+    def _validate_role(cls, v: UserRole) -> UserRole:
+        if v not in STAFF_INVITE_ROLES:
+            allowed = ", ".join(sorted(r.value for r in STAFF_INVITE_ROLES))
+            raise ValueError(f"role must be one of: {allowed}")
+        return v
+
+
+class StaffInviteRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str | None
+    role: UserRole
+    status: str
+    created_at: datetime
+    accepted_at: datetime | None = None
+
+
+class StaffInviteResult(BaseModel):
+    """Returned after creating a staff invitation."""
+
+    invite: StaffInviteRead
+    invite_url: str
+    email_delivered: bool = False
+
+
+class InvitedStaff(BaseModel):
+    """Public preview of a staff invitation, to prefill the accept form."""
+
+    email: EmailStr
+    full_name: str | None
+    role: UserRole
+    studio_name: str
+
+
+class StaffListEntry(BaseModel):
+    """A staff account or a pending invitation, unified for the admin list."""
+
+    kind: str  # "user" | "invite"
+    id: uuid.UUID
+    email: EmailStr
+    full_name: str | None
+    role: UserRole
+    is_active: bool
+    status: str  # active/inactive for users, pending for invites

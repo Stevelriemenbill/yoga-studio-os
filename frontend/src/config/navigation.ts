@@ -20,6 +20,7 @@ export interface NavGroup {
 const STAFF: UserRole[] = ['studio_admin', 'studio_manager', 'reception', 'teacher']
 const MANAGERS: UserRole[] = ['studio_admin', 'studio_manager']
 const FRONT_DESK: UserRole[] = ['studio_admin', 'studio_manager', 'reception']
+const ADMIN: UserRole[] = ['studio_admin']
 const MEMBERS: UserRole[] = ['member', 'trainee']
 
 /**
@@ -47,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: 'nav.groups.community',
     items: [
       { labelKey: 'nav.members', icon: 'pi pi-users', to: '/members', roles: FRONT_DESK, hintKey: 'nav.hints.members' },
+      { labelKey: 'nav.team', icon: 'pi pi-id-card', to: '/users', roles: ADMIN, hintKey: 'nav.hints.team' },
       { labelKey: 'nav.training', icon: 'pi pi-graduation-cap', to: '/training', roles: STAFF, hintKey: 'nav.hints.training' },
     ],
   },

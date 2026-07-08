@@ -37,6 +37,11 @@ export default {
       passwordMismatch: 'The passwords do not match.',
       activateFailed: 'Account could not be activated.',
     },
+    staffInvite: {
+      title: 'Activate team account',
+      welcome:
+        '{studio} invites you to join the team as {role}. Set a password to activate your account.',
+    },
   },
   roles: {
     studio_admin: 'Studio admin',
@@ -63,6 +68,7 @@ export default {
     events: 'Events',
     members: 'Members',
     training: 'Training',
+    team: 'Team',
     care: 'Care',
     assistant: 'Companion',
     community: 'Community',
@@ -82,6 +88,7 @@ export default {
       events: 'Workshops & retreats',
       members: 'Records & credits',
       training: 'Guide trainees',
+      team: 'Invite teachers & team',
       care: 'Who needs attention right now',
       assistant: 'Questions about guiding your students',
       community: 'A gentle pulse of the community',
@@ -556,6 +563,51 @@ export default {
       deleteFailed: 'Member could not be deleted.',
       inviteFailed: 'Invitation could not be created.',
       noEmail: '{name} has no email address on file.',
+    },
+  },
+  users: {
+    title: 'Team',
+    subtitle: 'Invite and manage teachers and team members.',
+    inviteButton: 'Invite person',
+    loading: 'Loading…',
+    revoke: 'Revoke',
+    confirmRevoke: 'Revoke the invitation to {email}?',
+    roles: {
+      teacher: 'Teacher',
+      studio_manager: 'Manager',
+      reception: 'Reception',
+    },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+      pending: 'Invited',
+    },
+    columns: {
+      name: 'Name',
+      email: 'Email',
+      role: 'Role',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    dialog: {
+      title: 'Invite to the team',
+    },
+    form: {
+      email: 'Email',
+      fullName: 'Name (optional)',
+      role: 'Role',
+      cancel: 'Cancel',
+      send: 'Send invitation',
+    },
+    invite: {
+      emailSent: 'Invitation sent by email to {email}.',
+      copiedToClipboard: 'No email is being sent yet (email delivery is not configured). The invitation link for {email} has been copied to the clipboard: {url}',
+      shareManually: 'No email is being sent yet (email delivery is not configured). Please share this invitation link with {email}: {url}',
+    },
+    errors: {
+      loadFailed: 'Team could not be loaded.',
+      inviteFailed: 'Invitation could not be created.',
+      revokeFailed: 'Invitation could not be revoked.',
     },
   },
   notifications: {

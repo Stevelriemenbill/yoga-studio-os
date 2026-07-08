@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     # Public URL of the frontend, used to build invitation links.
     FRONTEND_URL: str = "http://localhost:5173"
 
+    # Email / SMTP. If SMTP_HOST is set, real emails are sent via aiosmtplib;
+    # otherwise the console (log-only) sender is used and invitation links are
+    # surfaced in the UI instead.
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM: str = "no-reply@studio-os.local"
+    SMTP_FROM_NAME: str = "Studio OS"
+
     # Database
     POSTGRES_USER: str = "studio"
     POSTGRES_PASSWORD: str = "studio"

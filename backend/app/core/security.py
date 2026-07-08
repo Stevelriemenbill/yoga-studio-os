@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 
 from app.core.config import settings
 
-TokenType = Literal["access", "refresh", "invite"]
+TokenType = Literal["access", "refresh", "invite", "staff_invite"]
 
 # bcrypt operates on the first 72 bytes only; enforce explicitly.
 _BCRYPT_MAX_BYTES = 72
@@ -75,6 +75,21 @@ def create_invite_token(member_id: str, tenant_id: str) -> str:
         "sub": member_id,
         "tid": tenant_id,
         "type": "invite",
+        "iat": now,
+        "exp": now + timedelta(days=settings.INVITE_TOKEN_EXPIRE_DAYS),
+        "jti": str(uuid.uuid4()),
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def create_staff_invite_token(invite_id: str, tenant_id: str, role: str) -> str:
+    """Token embedded in a staff invitation link. Subject is the invite id."""
+    now = datetime.now(UTC)
+    payload: dict[str, Any] = {
+        "sub": invite_id,
+        "tid": tenant_id,
+        "role": role,
+        "type": "staff_invite",
         "iat": now,
         "exp": now + timedelta(days=settings.INVITE_TOKEN_EXPIRE_DAYS),
         "jti": str(uuid.uuid4()),

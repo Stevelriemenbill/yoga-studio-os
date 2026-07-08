@@ -25,6 +25,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/staff-invite/:token',
+      name: 'accept-staff-invite',
+      component: () => import('@/views/AcceptStaffInviteView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       children: [
@@ -47,6 +53,11 @@ const router = createRouter({
           path: 'members',
           name: 'members',
           component: () => import('@/views/MembersView.vue'),
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/UsersView.vue'),
         },
         {
           path: 'bookings',
@@ -137,7 +148,12 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  if (to.meta.public && auth.isAuthenticated && to.name !== 'accept-invite') {
+  if (
+    to.meta.public &&
+    auth.isAuthenticated &&
+    to.name !== 'accept-invite' &&
+    to.name !== 'accept-staff-invite'
+  ) {
     return { name: 'dashboard' }
   }
 

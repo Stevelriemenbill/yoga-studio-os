@@ -27,6 +27,7 @@ from app.models.notification import (
     NotificationStatus,
 )
 from app.models.session import CourseSession, SessionStatus
+from app.models.staff_invite import StaffInvite, StaffInviteStatus
 from app.models.student_note import StudentNote
 from app.models.tenant import Tenant
 from app.models.training import (
@@ -70,6 +71,8 @@ __all__ = [
     "AIInsight",
     "InsightType",
     "StudentNote",
+    "StaffInvite",
+    "StaffInviteStatus",
     "Event",
     "EventRegistration",
     "EventType",
