@@ -15,6 +15,7 @@ import Checkbox from 'primevue/checkbox'
 import {
   listEvents,
   createEvent,
+  updateEvent,
   listRegistrations,
   registerForEvent,
   confirmPayment,
@@ -134,6 +135,17 @@ async function saveEvent() {
   }
 }
 
+async function togglePublish(ev: StudioEvent) {
+  error.value = ''
+  try {
+    const updated = await updateEvent(ev.id, { is_published: !ev.is_published })
+    const idx = events.value.findIndex((e) => e.id === ev.id)
+    if (idx !== -1) events.value[idx] = updated
+  } catch {
+    error.value = t('events.errors.publish')
+  }
+}
+
 async function openRegistrations(ev: StudioEvent) {
   activeEvent.value = ev
   regMemberId.value = ''
@@ -219,6 +231,14 @@ onMounted(load)
       </Column>
       <Column :header="t('events.columns.actions')">
         <template #body="{ data }">
+          <Button
+            :label="data.is_published ? t('events.actions.unpublish') : t('events.actions.publish')"
+            :icon="data.is_published ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            size="small"
+            text
+            :severity="data.is_published ? 'secondary' : 'success'"
+            @click="togglePublish(data)"
+          />
           <Button :label="t('events.actions.registrations')" size="small" text @click="openRegistrations(data)" />
         </template>
       </Column>

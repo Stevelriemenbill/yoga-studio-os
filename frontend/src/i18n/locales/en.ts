@@ -467,6 +467,8 @@ export default {
     },
     actions: {
       registrations: 'Registrations',
+      publish: 'Publish',
+      unpublish: 'Unpublish',
       cancel: 'Cancel',
       save: 'Save',
       register: 'Register',
@@ -480,6 +482,7 @@ export default {
       register: 'Registration failed.',
       payment: 'Payment failed.',
       cancel: 'Cancellation failed.',
+      publish: 'Publishing failed.',
     },
   },
   members: {

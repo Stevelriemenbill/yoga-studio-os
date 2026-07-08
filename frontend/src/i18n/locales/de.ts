@@ -467,6 +467,8 @@ export default {
     },
     actions: {
       registrations: 'Anmeldungen',
+      publish: 'Veröffentlichen',
+      unpublish: 'Zurückziehen',
       cancel: 'Abbrechen',
       save: 'Speichern',
       register: 'Anmelden',
@@ -480,6 +482,7 @@ export default {
       register: 'Anmeldung fehlgeschlagen.',
       payment: 'Zahlung fehlgeschlagen.',
       cancel: 'Stornierung fehlgeschlagen.',
+      publish: 'Veröffentlichung fehlgeschlagen.',
     },
   },
   members: {
