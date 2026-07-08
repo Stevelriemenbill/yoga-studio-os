@@ -262,9 +262,9 @@ onMounted(load)
   color: #dc2626;
 }
 .notice {
-  color: #047857;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: var(--p-primary-700, #047857);
+  background: var(--p-primary-50, #ecfdf5);
+  border: 1px solid var(--p-primary-200, #a7f3d0);
   padding: 0.6rem 0.85rem;
   border-radius: 8px;
 }

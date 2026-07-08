@@ -216,7 +216,7 @@ async function saveTheme() {
   cursor: pointer;
 }
 .saved {
-  color: #10b981;
+  color: var(--p-primary-600, #059669);
   font-weight: 600;
 }
 .error {

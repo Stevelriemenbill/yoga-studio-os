@@ -12,7 +12,7 @@ body {
 }
 
 a {
-  color: #059669;
+  color: var(--p-primary-600, #059669);
   text-decoration: none;
 }
 
@@ -40,5 +40,5 @@ a:hover {
   color: #f1f5f9 !important;
 }
 .app-dark a {
-  color: #34d399;
+  color: var(--p-primary-400, #34d399);
 }

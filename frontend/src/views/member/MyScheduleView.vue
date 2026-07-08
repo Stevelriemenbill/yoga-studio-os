@@ -134,7 +134,7 @@ onMounted(load)
   color: #dc2626;
 }
 .info {
-  color: #059669;
+  color: var(--p-primary-600, #059669);
 }
 .muted {
   color: #6b7280;

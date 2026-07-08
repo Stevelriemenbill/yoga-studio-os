@@ -430,7 +430,7 @@ onMounted(load)
   cursor: pointer;
 }
 .series-result {
-  color: #10b981;
+  color: var(--p-primary-600, #059669);
   font-weight: 600;
   margin-top: 0.6rem;
 }

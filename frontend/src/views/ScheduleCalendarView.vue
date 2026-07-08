@@ -252,7 +252,7 @@ onMounted(load)
   color: #dc2626;
 }
 .info {
-  color: #059669;
+  color: var(--p-primary-600, #059669);
 }
 .grid {
   display: grid;
@@ -271,8 +271,8 @@ onMounted(load)
   gap: 0.5rem;
 }
 .day.today {
-  border-color: #10b981;
-  background: #ecfdf5;
+  border-color: var(--p-primary-500, #10b981);
+  background: var(--p-primary-50, #ecfdf5);
 }
 .day-head {
   font-size: 0.8rem;
@@ -297,7 +297,7 @@ onMounted(load)
   gap: 0.25rem;
 }
 .slot.mine {
-  border-color: #10b981;
+  border-color: var(--p-primary-500, #10b981);
 }
 .slot.past {
   opacity: 0.55;
