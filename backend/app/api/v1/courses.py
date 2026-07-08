@@ -17,6 +17,7 @@ from app.schemas.course import (
     RecurrenceSchedule,
     RoomCreate,
     RoomRead,
+    SessionCancel,
     SessionCreate,
     SessionRead,
     SessionUpdate,
@@ -191,14 +192,17 @@ async def update_session(
 @sessions_router.post("/{session_id}/cancel", response_model=SessionRead)
 async def cancel_session(
     session_id: uuid.UUID,
-    reason: str | None = None,
+    data: SessionCancel | None = None,
     current: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
     session = await SessionRepository(db, current.tenant_id).get(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return await course_service.cancel_session(db, session, reason)
+    reason = data.reason if data else None
+    return await course_service.cancel_session(
+        db, session, reason, tenant_id=current.tenant_id
+    )
 
 
 async def _attach_stats(

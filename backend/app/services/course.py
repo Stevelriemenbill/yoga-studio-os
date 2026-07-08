@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.repository import TenantRepository
@@ -160,10 +161,44 @@ async def update_session(
 
 
 async def cancel_session(
-    db: AsyncSession, session: CourseSession, reason: str | None
+    db: AsyncSession,
+    session: CourseSession,
+    reason: str | None,
+    *,
+    tenant_id: uuid.UUID | None = None,
+    notify: bool = True,
 ) -> CourseSession:
+    from app.models.booking import Booking, BookingStatus
+    from app.services import notification as notification_service
+
+    tid = tenant_id if tenant_id is not None else session.tenant_id
+
     session.status = SessionStatus.CANCELLED
     session.cancellation_reason = reason
+
+    # Notify booked members before their bookings are cancelled.
+    if notify:
+        await notification_service.notify_session_cancelled(
+            db, tid, session, reason=reason
+        )
+
+    # Cancel every active booking for this session.
+    bookings = (
+        (
+            await db.execute(
+                select(Booking).where(
+                    Booking.tenant_id == tid,
+                    Booking.session_id == session.id,
+                    Booking.status == BookingStatus.BOOKED,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for booking in bookings:
+        booking.status = BookingStatus.CANCELLED
+
     await db.commit()
     await db.refresh(session)
     return session

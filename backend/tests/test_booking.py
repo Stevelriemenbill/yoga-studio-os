@@ -238,6 +238,46 @@ async def test_rebook_moves_member(client):
 
 
 @pytest.mark.asyncio
+async def test_cancel_session_cancels_bookings_and_notifies(client):
+    """Cancelling a session cancels active bookings and queues notifications."""
+    headers = await _auth_headers(client)
+    course = await _make_course(client, headers, max_participants=5)
+    session = await _make_session(client, headers, course["id"])
+    m1 = await _make_member(client, headers, "Anna")
+    m2 = await _make_member(client, headers, "Bea")
+    for m in (m1, m2):
+        r = await client.post(
+            "/api/v1/bookings",
+            json={"session_id": session["id"], "member_id": m["id"]},
+            headers=headers,
+        )
+        assert r.status_code == 201, r.text
+
+    resp = await client.post(
+        f"/api/v1/sessions/{session['id']}/cancel",
+        json={"reason": "Lehrer krank"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "cancelled"
+    assert body["cancellation_reason"] == "Lehrer krank"
+
+    # No active bookings remain for the session.
+    bookings = (
+        await client.get(
+            f"/api/v1/bookings/session/{session['id']}", headers=headers
+        )
+    ).json()
+    assert bookings == []
+
+    # A notification was queued for each affected member.
+    notes = (await client.get("/api/v1/notifications", headers=headers)).json()
+    member_ids = {n["member_id"] for n in notes if n.get("template") == "session_cancelled"}
+    assert {m1["id"], m2["id"]} <= member_ids
+
+
+@pytest.mark.asyncio
 async def test_tenant_isolation(client):
     """A member from tenant A must not be visible/bookable in tenant B."""
     headers_a = await _auth_headers(client)

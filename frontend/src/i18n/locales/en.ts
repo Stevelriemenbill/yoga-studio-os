@@ -196,6 +196,11 @@ export default {
     bookSuccess: 'Spot booked.',
     bookError: 'Booking failed.',
     loadError: 'The calendar could not be loaded.',
+    cancel: 'Cancel',
+    cancelPrompt:
+      'Cancel this session? All bookings will be cancelled and participants notified. Optionally give a reason.',
+    cancelSuccess: 'Session cancelled. Participants will be notified.',
+    cancelError: 'The session could not be cancelled.',
   },
   dashboard: {
     welcome: 'Welcome',

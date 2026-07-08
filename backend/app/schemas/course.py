@@ -129,6 +129,10 @@ class SessionUpdate(BaseModel):
     cancellation_reason: str | None = None
 
 
+class SessionCancel(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class SessionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -141,6 +145,7 @@ class SessionRead(BaseModel):
     capacity: int
     overbooking_allowance: int
     status: SessionStatus
+    cancellation_reason: str | None = None
 
 
 class SessionWithStats(SessionRead):

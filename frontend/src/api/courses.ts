@@ -110,3 +110,14 @@ export async function listSessions(params?: {
   const { data } = await api.get<SessionWithStats[]>('/sessions', { params })
   return data
 }
+
+export async function cancelSession(
+  sessionId: string,
+  reason?: string,
+): Promise<SessionWithStats> {
+  const { data } = await api.post<SessionWithStats>(
+    `/sessions/${sessionId}/cancel`,
+    { reason: reason || null },
+  )
+  return data
+}

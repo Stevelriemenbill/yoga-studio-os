@@ -196,6 +196,11 @@ export default {
     bookSuccess: 'Platz gebucht.',
     bookError: 'Buchung nicht möglich.',
     loadError: 'Kalender konnte nicht geladen werden.',
+    cancel: 'Absagen',
+    cancelPrompt:
+      'Diese Stunde absagen? Alle Buchungen werden storniert und die Teilnehmer benachrichtigt. Optional: Grund angeben.',
+    cancelSuccess: 'Stunde abgesagt. Teilnehmer werden benachrichtigt.',
+    cancelError: 'Stunde konnte nicht abgesagt werden.',
   },
   dashboard: {
     welcome: 'Willkommen',

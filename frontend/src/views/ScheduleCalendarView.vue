@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 
 import { listSchedule, listCourses, bookSession, myBookings } from '@/api/me'
+import { cancelSession } from '@/api/courses'
 import { useAuthStore } from '@/stores/auth'
 import type { Booking, Course, SessionWithStats } from '@/types'
 
@@ -151,6 +152,20 @@ function isBooked(id: string): boolean {
   return bookedSessionIds.value.has(id)
 }
 
+async function cancel(session: SessionWithStats) {
+  const reason = window.prompt(t('calendar.cancelPrompt'))
+  if (reason === null) return
+  error.value = ''
+  info.value = ''
+  try {
+    await cancelSession(session.id, reason.trim() || undefined)
+    sessions.value = sessions.value.filter((s) => s.id !== session.id)
+    info.value = t('calendar.cancelSuccess')
+  } catch {
+    error.value = t('calendar.cancelError')
+  }
+}
+
 function capacityOf(s: SessionWithStats): number {
   return s.capacity + s.overbooking_allowance
 }
@@ -219,6 +234,16 @@ onMounted(load)
             <span v-if="s.waitlist_count > 0" class="waitlist">
               · {{ t('calendar.waitlist', { count: s.waitlist_count }) }}
             </span>
+            <Button
+              v-if="!isPast(s)"
+              class="cancel-btn"
+              :label="t('calendar.cancel')"
+              icon="pi pi-times"
+              size="small"
+              severity="danger"
+              text
+              @click="cancel(s)"
+            />
           </div>
         </div>
       </div>
@@ -316,6 +341,11 @@ onMounted(load)
 }
 .waitlist {
   color: #d97706;
+}
+.cancel-btn {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+  padding: 0;
 }
 @media (max-width: 900px) {
   .grid {

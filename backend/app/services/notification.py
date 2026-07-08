@@ -163,3 +163,49 @@ async def schedule_session_reminders(
         )
         created.append(n)
     return created
+
+
+async def notify_session_cancelled(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    session: CourseSession,
+    *,
+    reason: str | None = None,
+    channel: NotificationChannel = NotificationChannel.PUSH,
+) -> list[Notification]:
+    """Notify every booked member that a session has been cancelled."""
+    from app.models.booking import Booking, BookingStatus
+
+    bookings = (
+        (
+            await db.execute(
+                select(Booking).where(
+                    Booking.tenant_id == tenant_id,
+                    Booking.session_id == session.id,
+                    Booking.status == BookingStatus.BOOKED,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    course_name = getattr(session.course, "name", "Kurs")
+    when = session.starts_at.strftime("%d.%m. um %H:%M")
+    body = f"Abgesagt: {course_name} am {when} Uhr entfällt leider."
+    if reason:
+        body += f" Grund: {reason}"
+
+    created: list[Notification] = []
+    for b in bookings:
+        n = await enqueue(
+            db,
+            tenant_id,
+            channel=channel,
+            body=body,
+            member_id=b.member_id,
+            subject=f"Abgesagt: {course_name}",
+            template="session_cancelled",
+        )
+        created.append(n)
+    return created
