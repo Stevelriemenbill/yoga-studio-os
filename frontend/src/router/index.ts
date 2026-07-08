@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { public: true },
     },
     {
+      path: '/invite/:token',
+      name: 'accept-invite',
+      component: () => import('@/views/AcceptInviteView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       children: [
@@ -96,7 +102,7 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  if (to.meta.public && auth.isAuthenticated) {
+  if (to.meta.public && auth.isAuthenticated && to.name !== 'accept-invite') {
     return { name: 'dashboard' }
   }
 

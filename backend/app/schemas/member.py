@@ -42,3 +42,4 @@ class MemberRead(BaseModel):
     membership_valid_until: date | None
     credits: int
     reliability_score: float
+    user_id: uuid.UUID | None

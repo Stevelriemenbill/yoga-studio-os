@@ -9,12 +9,13 @@ import Tag from 'primevue/tag'
 import Dropdown from 'primevue/dropdown'
 import InputNumber from 'primevue/inputnumber'
 
-import { listMembers, createMember, updateMember, deleteMember } from '@/api/members'
+import { listMembers, createMember, updateMember, deleteMember, inviteMember } from '@/api/members'
 import type { Member, MembershipType } from '@/types'
 
 const members = ref<Member[]>([])
 const loading = ref(false)
 const error = ref('')
+const notice = ref('')
 
 const membershipOptions: { label: string; value: MembershipType }[] = [
   { label: 'Keine', value: 'none' },
@@ -125,6 +126,31 @@ async function remove(m: Member) {
   }
 }
 
+const inviting = ref<string | null>(null)
+
+async function invite(m: Member) {
+  error.value = ''
+  notice.value = ''
+  if (!m.email) {
+    error.value = `${m.first_name} hat keine E-Mail-Adresse hinterlegt.`
+    return
+  }
+  inviting.value = m.id
+  try {
+    const { invite_url } = await inviteMember(m.id)
+    try {
+      await navigator.clipboard.writeText(invite_url)
+      notice.value = `Einladung an ${m.email} versendet. Link in die Zwischenablage kopiert.`
+    } catch {
+      notice.value = `Einladung an ${m.email} versendet: ${invite_url}`
+    }
+  } catch {
+    error.value = 'Einladung konnte nicht versendet werden.'
+  } finally {
+    inviting.value = null
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -136,6 +162,7 @@ onMounted(load)
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="notice" class="notice">{{ notice }}</p>
     <p v-if="loading">Wird geladen…</p>
 
     <DataTable v-else :value="members" dataKey="id" responsiveLayout="scroll">
@@ -150,6 +177,21 @@ onMounted(load)
       <Column field="credits" header="Guthaben" />
       <Column header="Zuverlässigkeit">
         <template #body="{ data }">{{ fmtScore(data.reliability_score) }}</template>
+      </Column>
+      <Column header="Konto">
+        <template #body="{ data }">
+          <Tag v-if="data.user_id" value="Aktiviert" severity="success" />
+          <Button
+            v-else
+            label="Einladen"
+            icon="pi pi-envelope"
+            size="small"
+            text
+            :loading="inviting === data.id"
+            :disabled="!data.email"
+            @click="invite(data)"
+          />
+        </template>
       </Column>
       <Column header="Aktionen">
         <template #body="{ data }">
@@ -210,6 +252,13 @@ onMounted(load)
 }
 .error {
   color: #dc2626;
+}
+.notice {
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
 }
 .form {
   display: flex;

@@ -68,3 +68,29 @@ class RegistrationResult(BaseModel):
     tenant: TenantRead
     user: UserRead
     token: Token
+
+
+class InviteResult(BaseModel):
+    """Returned to staff after creating an invitation."""
+
+    invite_url: str
+    token: str
+
+
+class InvitedMember(BaseModel):
+    """Public preview of an invitation, used to prefill the accept form."""
+
+    first_name: str
+    last_name: str
+    email: EmailStr
+    studio_name: str
+
+
+class AcceptInviteRequest(BaseModel):
+    token: str
+    password: str = Field(min_length=8, max_length=128)
+
+
+class AcceptInviteResult(BaseModel):
+    user: UserRead
+    token: Token

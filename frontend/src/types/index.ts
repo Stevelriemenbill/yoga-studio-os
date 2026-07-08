@@ -62,6 +62,7 @@ export interface Member {
   membership_valid_until: string | null
   credits: number
   reliability_score: number
+  user_id: string | null
 }
 
 // --- Courses / Rooms / Sessions ---

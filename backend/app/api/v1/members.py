@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, require_staff
 from app.db.session import get_db
+from app.schemas.auth import InviteResult
 from app.schemas.member import MemberCreate, MemberRead, MemberUpdate
+from app.services import auth as auth_service
 from app.services import member as member_service
 from app.services.member import MemberRepository
 
@@ -52,6 +54,23 @@ async def update_member(
     if member is None:
         raise HTTPException(status_code=404, detail="Member not found")
     return await member_service.update_member(db, member, data)
+
+
+@router.post("/{member_id}/invite", response_model=InviteResult)
+async def invite_member(
+    member_id: uuid.UUID,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """Send an invitation so the member can create their own login account."""
+    member = await MemberRepository(db, current.tenant_id).get(member_id)
+    if member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    try:
+        token, url = await auth_service.invite_member(db, current.tenant_id, member)
+    except auth_service.AuthError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return InviteResult(invite_url=url, token=token)
 
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)

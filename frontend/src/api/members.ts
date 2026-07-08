@@ -38,3 +38,13 @@ export async function updateMember(
 export async function deleteMember(id: string): Promise<void> {
   await api.delete(`/members/${id}`)
 }
+
+export interface InviteResult {
+  invite_url: string
+  token: string
+}
+
+export async function inviteMember(id: string): Promise<InviteResult> {
+  const { data } = await api.post<InviteResult>(`/members/${id}/invite`)
+  return data
+}

@@ -12,8 +12,12 @@ from app.core.security import (
     decode_token,
 )
 from app.db.session import get_db
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.auth import (
+    AcceptInviteRequest,
+    AcceptInviteResult,
+    InvitedMember,
     LoginRequest,
     RefreshRequest,
     RegistrationResult,
@@ -103,3 +107,46 @@ async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)) -> T
 @router.get("/me", response_model=UserRead)
 async def me(current: CurrentUser = Depends(get_current_user)) -> UserRead:
     return UserRead.model_validate(current.user)
+
+
+@router.get("/invite/{token}", response_model=InvitedMember)
+async def preview_invite(
+    token: str, db: AsyncSession = Depends(get_db)
+) -> InvitedMember:
+    """Public: validate an invitation and return details to prefill the form."""
+    try:
+        member = await auth_service.get_invited_member(db, token)
+    except auth_service.AuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    tenant = await db.get(Tenant, member.tenant_id)
+    return InvitedMember(
+        first_name=member.first_name,
+        last_name=member.last_name,
+        email=member.email or "",
+        studio_name=tenant.name if tenant else "",
+    )
+
+
+@router.post(
+    "/invite/accept",
+    response_model=AcceptInviteResult,
+    status_code=status.HTTP_201_CREATED,
+)
+async def accept_invite(
+    data: AcceptInviteRequest, db: AsyncSession = Depends(get_db)
+) -> AcceptInviteResult:
+    """Public: consume an invite, create the member's login and auto-login."""
+    try:
+        user = await auth_service.accept_invite(db, data.token, data.password)
+    except auth_service.AuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+
+    return AcceptInviteResult(
+        user=UserRead.model_validate(user),
+        token=auth_service.issue_tokens(user),
+    )

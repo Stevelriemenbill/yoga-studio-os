@@ -52,6 +52,16 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = result.user
   }
 
+  /** Establish a session from tokens obtained out-of-band (e.g. invite accept). */
+  function applySession(
+    tokens: { access_token: string; refresh_token: string },
+    nextUser: User,
+  ): void {
+    persist(tokens.access_token, tokens.refresh_token)
+    user.value = nextUser
+    initialized.value = true
+  }
+
   async function initialize(): Promise<void> {
     if (initialized.value) return
     setTokens(accessToken.value, refreshToken.value)
@@ -71,6 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     login,
     register,
+    applySession,
     logout,
     loadUser,
     initialize,
