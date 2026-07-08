@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import { useAuthStore } from '@/stores/auth'
+import { ROUTE_ROLES } from '@/config/navigation'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -97,6 +98,16 @@ router.beforeEach(async (to) => {
 
   if (to.meta.public && auth.isAuthenticated) {
     return { name: 'dashboard' }
+  }
+
+  // Role-based access: redirect to dashboard if the user's role
+  // is not permitted for the target path.
+  if (!to.meta.public && auth.isAuthenticated) {
+    const allowed = ROUTE_ROLES[to.path]
+    const role = auth.user?.role
+    if (allowed && allowed.length > 0 && (!role || !allowed.includes(role))) {
+      return { name: 'dashboard' }
+    }
   }
 
   return true
