@@ -285,6 +285,7 @@ export default {
   courses: {
     title: 'Kurse',
     newCourse: 'Neuer Kurs',
+    editCourse: 'Kurs bearbeiten',
     newSession: 'Neuer Termin',
     loading: 'Wird geladen…',
     availableRooms: 'Verfügbare Räume: {count}',
@@ -311,6 +312,7 @@ export default {
     actions: {
       session: 'Termin',
       series: 'Serie',
+      edit: 'Bearbeiten',
       cancel: 'Abbrechen',
       save: 'Speichern',
       create: 'Erstellen',
@@ -346,12 +348,25 @@ export default {
       countsForTraining: 'Für Ausbildung relevant',
       countsForTrainingHint:
         'Teilnahme an diesem Kurs zählt für Ausbildungsstunden.',
+      isOnline: 'Findet online statt',
+      onlineUrl: 'Meeting-Link',
+      location: 'Ort',
+      locationPlaceholder: 'z.B. Studio Raum 1',
+      overrideLocation: 'Ort/Online für diesen Termin abweichend',
+      registrationInfo: 'Anmelde-/Infotext',
+      registrationInfoHint:
+        'Wird den Mitgliedern angezeigt (z.B. Anmeldeinfos, was mitzubringen ist, Zugangsdaten).',
+      attachments: 'Anhänge',
+      noAttachments: 'Noch keine Dateien.',
+      uploadFile: 'Datei hochladen',
+      attachmentsAfterSave: 'Dateien können nach dem Speichern hochgeladen werden.',
     },
     errors: {
       loadCourses: 'Kurse konnten nicht geladen werden.',
       saveCourse: 'Kurs konnte nicht gespeichert werden.',
       saveSession: 'Termin konnte nicht erstellt werden.',
       saveSeries: 'Serie konnte nicht erstellt werden.',
+      upload: 'Datei konnte nicht hochgeladen werden.',
     },
   },
   bookings: {

@@ -11,9 +11,20 @@ import Dropdown from 'primevue/dropdown'
 import InputNumber from 'primevue/inputnumber'
 import DatePicker from 'primevue/datepicker'
 import Checkbox from 'primevue/checkbox'
+import Textarea from 'primevue/textarea'
 
-import { listCourses, createCourse, createSession, listRooms, scheduleRecurring } from '@/api/courses'
-import type { Course, Room, CourseLevel } from '@/types'
+import {
+  listCourses,
+  createCourse,
+  updateCourse,
+  createSession,
+  listRooms,
+  scheduleRecurring,
+  listCourseAttachments,
+  uploadCourseAttachment,
+  deleteCourseAttachment,
+} from '@/api/courses'
+import type { Course, CourseAttachment, Room, CourseLevel } from '@/types'
 
 const { t } = useI18n()
 
@@ -31,6 +42,7 @@ const levelOptions: { label: string; value: CourseLevel }[] = [
 
 const showCourseDialog = ref(false)
 const savingCourse = ref(false)
+const editingCourseId = ref<string | null>(null)
 const form = ref<{
   name: string
   category: string
@@ -38,6 +50,10 @@ const form = ref<{
   max_participants: number
   duration_minutes: number
   counts_for_training: boolean
+  location: string
+  is_online: boolean
+  online_url: string
+  registration_info: string
 }>({
   name: '',
   category: '',
@@ -45,12 +61,27 @@ const form = ref<{
   max_participants: 12,
   duration_minutes: 60,
   counts_for_training: false,
+  location: '',
+  is_online: false,
+  online_url: '',
+  registration_info: '',
 })
+
+// Attachments for the course being edited.
+const attachments = ref<CourseAttachment[]>([])
+const uploadingFile = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const showSessionDialog = ref(false)
 const savingSession = ref(false)
 const sessionCourse = ref<Course | null>(null)
 const sessionStartsAt = ref<Date | null>(null)
+const sessionOverrideLocation = ref(false)
+const sessionForm = ref<{
+  is_online: boolean
+  location: string
+  online_url: string
+}>({ is_online: false, location: '', online_url: '' })
 
 // --- Recurring series ---
 const showSeriesDialog = ref(false)
@@ -101,30 +132,70 @@ async function load() {
   }
 }
 
-function openCourseDialog() {
-  form.value = {
-    name: '',
-    category: '',
-    level: 'all',
-    max_participants: 12,
-    duration_minutes: 60,
-    counts_for_training: false,
+function openCourseDialog(course?: Course) {
+  attachments.value = []
+  if (course) {
+    editingCourseId.value = course.id
+    form.value = {
+      name: course.name,
+      category: course.category ?? '',
+      level: course.level,
+      max_participants: course.max_participants,
+      duration_minutes: course.duration_minutes,
+      counts_for_training: course.counts_for_training,
+      location: course.location ?? '',
+      is_online: course.is_online,
+      online_url: course.online_url ?? '',
+      registration_info: course.registration_info ?? '',
+    }
+    loadAttachments(course.id)
+  } else {
+    editingCourseId.value = null
+    form.value = {
+      name: '',
+      category: '',
+      level: 'all',
+      max_participants: 12,
+      duration_minutes: 60,
+      counts_for_training: false,
+      location: '',
+      is_online: false,
+      online_url: '',
+      registration_info: '',
+    }
   }
   showCourseDialog.value = true
+}
+
+async function loadAttachments(courseId: string) {
+  try {
+    attachments.value = await listCourseAttachments(courseId)
+  } catch {
+    /* non-critical */
+  }
 }
 
 async function saveCourse() {
   savingCourse.value = true
   error.value = ''
   try {
-    await createCourse({
+    const payload = {
       name: form.value.name,
       category: form.value.category || undefined,
       level: form.value.level,
       max_participants: form.value.max_participants,
       duration_minutes: form.value.duration_minutes,
       counts_for_training: form.value.counts_for_training,
-    })
+      location: form.value.location || null,
+      is_online: form.value.is_online,
+      online_url: form.value.online_url || null,
+      registration_info: form.value.registration_info || null,
+    }
+    if (editingCourseId.value) {
+      await updateCourse(editingCourseId.value, payload)
+    } else {
+      await createCourse(payload)
+    }
     showCourseDialog.value = false
     await load()
   } catch {
@@ -134,9 +205,59 @@ async function saveCourse() {
   }
 }
 
+function triggerFilePick() {
+  fileInput.value?.click()
+}
+
+async function onFileSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !editingCourseId.value) return
+  uploadingFile.value = true
+  error.value = ''
+  try {
+    const att = await uploadCourseAttachment(editingCourseId.value, file)
+    attachments.value.push(att)
+  } catch {
+    error.value = t('courses.errors.upload')
+  } finally {
+    uploadingFile.value = false
+    input.value = ''
+  }
+}
+
+async function removeAttachment(att: CourseAttachment) {
+  if (!editingCourseId.value) return
+  try {
+    await deleteCourseAttachment(editingCourseId.value, att.id)
+    attachments.value = attachments.value.filter((a) => a.id !== att.id)
+  } catch {
+    error.value = t('courses.errors.upload')
+  }
+}
+
+function fileSizeLabel(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
+/** Media URLs are served at the API host root (not under /api/v1). */
+const mediaHost = apiBase.replace(/\/api\/v1\/?$/, '')
+function attachmentUrl(att: CourseAttachment): string {
+  return att.url ? `${mediaHost}${att.url}` : '#'
+}
+
 function openSessionDialog(course: Course) {
   sessionCourse.value = course
   sessionStartsAt.value = null
+  sessionOverrideLocation.value = false
+  sessionForm.value = {
+    is_online: course.is_online,
+    location: course.location ?? '',
+    online_url: course.online_url ?? '',
+  }
   showSessionDialog.value = true
 }
 
@@ -145,9 +266,19 @@ async function saveSession() {
   savingSession.value = true
   error.value = ''
   try {
+    const override = sessionOverrideLocation.value
     await createSession(sessionCourse.value.id, {
       course_id: sessionCourse.value.id,
       starts_at: sessionStartsAt.value.toISOString(),
+      // Only send overrides when the user chose to override; otherwise
+      // leave null so the session inherits the course location.
+      is_online: override ? sessionForm.value.is_online : null,
+      location: override && !sessionForm.value.is_online
+        ? sessionForm.value.location || null
+        : null,
+      online_url: override && sessionForm.value.is_online
+        ? sessionForm.value.online_url || null
+        : null,
     })
     showSessionDialog.value = false
     await load()
@@ -217,7 +348,7 @@ onMounted(load)
   <div class="page">
     <div class="header">
       <h1>{{ t('courses.title') }}</h1>
-      <Button :label="t('courses.newCourse')" icon="pi pi-plus" @click="openCourseDialog" />
+      <Button :label="t('courses.newCourse')" icon="pi pi-plus" @click="openCourseDialog()" />
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
@@ -251,6 +382,13 @@ onMounted(load)
       <Column :header="t('courses.columns.actions')">
         <template #body="{ data }">
           <Button
+            :label="t('courses.actions.edit')"
+            icon="pi pi-pencil"
+            size="small"
+            text
+            @click="openCourseDialog(data)"
+          />
+          <Button
             :label="t('courses.actions.session')"
             icon="pi pi-calendar-plus"
             size="small"
@@ -269,7 +407,12 @@ onMounted(load)
     </DataTable>
     </template>
 
-    <Dialog v-model:visible="showCourseDialog" :header="t('courses.newCourse')" modal :style="{ width: '460px' }">
+    <Dialog
+      v-model:visible="showCourseDialog"
+      :header="editingCourseId ? t('courses.editCourse') : t('courses.newCourse')"
+      modal
+      :style="{ width: '520px' }"
+    >
       <div class="form">
         <label>{{ t('courses.form.name') }}</label>
         <InputText v-model="form.name" />
@@ -286,11 +429,62 @@ onMounted(load)
         <InputNumber v-model="form.max_participants" :min="1" />
         <label>{{ t('courses.form.duration') }}</label>
         <InputNumber v-model="form.duration_minutes" :min="1" />
+
+        <div class="checkbox-row">
+          <Checkbox v-model="form.is_online" inputId="online" binary />
+          <label for="online" class="checkbox-label">{{ t('courses.form.isOnline') }}</label>
+        </div>
+        <template v-if="form.is_online">
+          <label>{{ t('courses.form.onlineUrl') }}</label>
+          <InputText v-model="form.online_url" placeholder="https://…" />
+        </template>
+        <template v-else>
+          <label>{{ t('courses.form.location') }}</label>
+          <InputText v-model="form.location" :placeholder="t('courses.form.locationPlaceholder')" />
+        </template>
+
+        <label>{{ t('courses.form.registrationInfo') }}</label>
+        <Textarea v-model="form.registration_info" rows="3" autoResize />
+        <small class="hint">{{ t('courses.form.registrationInfoHint') }}</small>
+
         <div class="checkbox-row">
           <Checkbox v-model="form.counts_for_training" inputId="cft" binary />
           <label for="cft" class="checkbox-label">{{ t('courses.form.countsForTraining') }}</label>
         </div>
         <small class="hint">{{ t('courses.form.countsForTrainingHint') }}</small>
+
+        <template v-if="editingCourseId">
+          <label>{{ t('courses.form.attachments') }}</label>
+          <ul v-if="attachments.length" class="attachments">
+            <li v-for="att in attachments" :key="att.id">
+              <a :href="attachmentUrl(att)" target="_blank" rel="noopener">{{ att.filename }}</a>
+              <span class="att-size">{{ fileSizeLabel(att.size_bytes) }}</span>
+              <Button
+                icon="pi pi-trash"
+                size="small"
+                text
+                severity="danger"
+                @click="removeAttachment(att)"
+              />
+            </li>
+          </ul>
+          <p v-else class="hint">{{ t('courses.form.noAttachments') }}</p>
+          <input
+            ref="fileInput"
+            type="file"
+            style="display: none"
+            @change="onFileSelected"
+          />
+          <Button
+            :label="t('courses.form.uploadFile')"
+            icon="pi pi-upload"
+            size="small"
+            outlined
+            :loading="uploadingFile"
+            @click="triggerFilePick"
+          />
+        </template>
+        <small v-else class="hint">{{ t('courses.form.attachmentsAfterSave') }}</small>
       </div>
       <template #footer>
         <Button :label="t('courses.actions.cancel')" text @click="showCourseDialog = false" />
@@ -308,6 +502,25 @@ onMounted(load)
         <label>{{ t('courses.form.course') }}: {{ sessionCourse?.name }}</label>
         <label>{{ t('courses.form.startTime') }}</label>
         <DatePicker v-model="sessionStartsAt" showTime hourFormat="24" />
+
+        <div class="checkbox-row">
+          <Checkbox v-model="sessionOverrideLocation" inputId="ovr" binary />
+          <label for="ovr" class="checkbox-label">{{ t('courses.form.overrideLocation') }}</label>
+        </div>
+        <template v-if="sessionOverrideLocation">
+          <div class="checkbox-row">
+            <Checkbox v-model="sessionForm.is_online" inputId="sonline" binary />
+            <label for="sonline" class="checkbox-label">{{ t('courses.form.isOnline') }}</label>
+          </div>
+          <template v-if="sessionForm.is_online">
+            <label>{{ t('courses.form.onlineUrl') }}</label>
+            <InputText v-model="sessionForm.online_url" placeholder="https://…" />
+          </template>
+          <template v-else>
+            <label>{{ t('courses.form.location') }}</label>
+            <InputText v-model="sessionForm.location" :placeholder="t('courses.form.locationPlaceholder')" />
+          </template>
+        </template>
       </div>
       <template #footer>
         <Button :label="t('courses.actions.cancel')" text @click="showSessionDialog = false" />
@@ -432,6 +645,24 @@ onMounted(load)
 }
 .muted {
   color: #94a3b8;
+}
+.attachments {
+  list-style: none;
+  padding: 0;
+  margin: 0.2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.attachments li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.att-size {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-left: auto;
 }
 .weekdays {
   display: flex;

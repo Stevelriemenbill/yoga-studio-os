@@ -1,5 +1,11 @@
 import { api } from './client'
-import type { Course, CourseSession, Room, SessionWithStats } from '@/types'
+import type {
+  Course,
+  CourseAttachment,
+  CourseSession,
+  Room,
+  SessionWithStats,
+} from '@/types'
 
 // --- Rooms ---
 export async function listRooms(): Promise<Room[]> {
@@ -27,6 +33,10 @@ export interface CoursePayload {
   min_participants?: number
   duration_minutes?: number
   counts_for_training?: boolean
+  location?: string | null
+  is_online?: boolean
+  online_url?: string | null
+  registration_info?: string | null
 }
 
 export async function listCourses(): Promise<Course[]> {
@@ -56,6 +66,37 @@ export async function deleteCourse(id: string): Promise<void> {
   await api.delete(`/courses/${id}`)
 }
 
+// --- Course attachments ---
+export async function listCourseAttachments(
+  courseId: string,
+): Promise<CourseAttachment[]> {
+  const { data } = await api.get<CourseAttachment[]>(
+    `/courses/${courseId}/attachments`,
+  )
+  return data
+}
+
+export async function uploadCourseAttachment(
+  courseId: string,
+  file: File,
+): Promise<CourseAttachment> {
+  const form = new FormData()
+  form.append('file', file)
+  const { data } = await api.post<CourseAttachment>(
+    `/courses/${courseId}/attachments`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
+export async function deleteCourseAttachment(
+  courseId: string,
+  attachmentId: string,
+): Promise<void> {
+  await api.delete(`/courses/${courseId}/attachments/${attachmentId}`)
+}
+
 // --- Sessions ---
 export interface SessionPayload {
   course_id: string
@@ -63,6 +104,9 @@ export interface SessionPayload {
   teacher_id?: string | null
   room_id?: string | null
   capacity?: number | null
+  location?: string | null
+  is_online?: boolean | null
+  online_url?: string | null
 }
 
 export async function createSession(

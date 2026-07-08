@@ -100,6 +100,20 @@ export interface Course {
   duration_minutes: number
   is_active: boolean
   counts_for_training: boolean
+  location: string | null
+  is_online: boolean
+  online_url: string | null
+  registration_info: string | null
+}
+
+export interface CourseAttachment {
+  id: string
+  course_id: string
+  filename: string
+  content_type: string | null
+  size_bytes: number
+  created_at: string
+  url: string | null
 }
 
 export type SessionStatus = 'scheduled' | 'cancelled' | 'completed'
@@ -113,6 +127,9 @@ export interface CourseSession {
   room_id: string | null
   capacity: number | null
   status: SessionStatus
+  location?: string | null
+  is_online?: boolean | null
+  online_url?: string | null
 }
 
 export interface SessionWithStats extends CourseSession {
@@ -122,6 +139,9 @@ export interface SessionWithStats extends CourseSession {
   booked_count: number
   waitlist_count: number
   available_spots: number
+  effective_location: string | null
+  effective_is_online: boolean
+  effective_online_url: string | null
 }
 
 // --- Bookings / Waitlist ---
