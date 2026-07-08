@@ -102,6 +102,14 @@ export interface CourseSession {
   status: SessionStatus
 }
 
+export interface SessionWithStats extends CourseSession {
+  ends_at: string
+  overbooking_allowance: number
+  booked_count: number
+  waitlist_count: number
+  available_spots: number
+}
+
 // --- Bookings / Waitlist ---
 export type BookingStatus = 'booked' | 'cancelled' | 'attended' | 'no_show'
 export type BookingSource = 'direct' | 'drop_in' | 'waitlist'

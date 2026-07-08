@@ -37,6 +37,16 @@ class BookingRepository(TenantRepository[Booking]):
         )
         return result.scalar_one_or_none()
 
+    async def for_member(self, member_id: uuid.UUID) -> list[Booking]:
+        """All bookings of a member, newest session first."""
+        result = await self.db.execute(
+            self._base_query()
+            .join(CourseSession, CourseSession.id == Booking.session_id)
+            .where(Booking.member_id == member_id)
+            .order_by(CourseSession.starts_at.desc())
+        )
+        return list(result.scalars().all())
+
 
 async def count_active_bookings(
     db: AsyncSession, tenant_id: uuid.UUID, session_id: uuid.UUID

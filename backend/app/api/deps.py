@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.models.member import Member
 from app.models.user import STAFF_ROLES, User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -88,3 +89,28 @@ async def require_staff(
             detail="Staff access required",
         )
     return current
+
+
+async def get_current_member(
+    current: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Member:
+    """Resolve the Member record linked to the authenticated user.
+
+    Used by member self-service endpoints so that actions are always scoped to
+    the caller's own member record — the member id is never taken from client
+    input. Raises 404 if the login is not linked to a member (e.g. staff-only
+    accounts).
+    """
+    # Import here to avoid a circular import (services import models/deps).
+    from app.services.member import MemberRepository
+
+    member = await MemberRepository(db, current.tenant_id).by_user_id(
+        current.user.id
+    )
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No member profile linked to this account",
+        )
+    return member

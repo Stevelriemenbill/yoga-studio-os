@@ -10,6 +10,7 @@ from app.api.v1 import (
     courses,
     events,
     integrations,
+    me,
     members,
     notifications,
     training,
@@ -18,6 +19,7 @@ from app.api.v1 import (
 api_router = APIRouter()
 api_router.include_router(auth.router)
 api_router.include_router(members.router)
+api_router.include_router(me.router)
 api_router.include_router(courses.router)
 api_router.include_router(courses.rooms_router)
 api_router.include_router(courses.sessions_router)

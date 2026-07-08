@@ -10,6 +10,13 @@ from app.schemas.member import MemberCreate, MemberUpdate
 class MemberRepository(TenantRepository[Member]):
     model = Member
 
+    async def by_user_id(self, user_id: uuid.UUID) -> Member | None:
+        """Return the member record linked to a login user, if any."""
+        result = await self.db.execute(
+            self._base_query().where(Member.user_id == user_id)
+        )
+        return result.scalar_one_or_none()
+
 
 async def create_member(
     db: AsyncSession, tenant_id: uuid.UUID, data: MemberCreate

@@ -20,6 +20,7 @@ export interface NavGroup {
 const STAFF: UserRole[] = ['studio_admin', 'studio_manager', 'reception', 'teacher']
 const MANAGERS: UserRole[] = ['studio_admin', 'studio_manager']
 const FRONT_DESK: UserRole[] = ['studio_admin', 'studio_manager', 'reception']
+const MEMBERS: UserRole[] = ['member', 'trainee']
 
 /**
  * Navigation grouped by the jobs users come to do, not by feature.
@@ -56,6 +57,14 @@ export const NAV_GROUPS: NavGroup[] = [
       { labelKey: 'nav.community', icon: 'pi pi-chart-line', to: '/analytics', roles: MANAGERS, hintKey: 'nav.hints.community' },
       { labelKey: 'nav.automations', icon: 'pi pi-bolt', to: '/automations', roles: MANAGERS, hintKey: 'nav.hints.automations' },
       { labelKey: 'nav.notifications', icon: 'pi pi-bell', to: '/notifications', roles: STAFF, hintKey: 'nav.hints.notifications' },
+    ],
+  },
+  {
+    labelKey: 'nav.groups.myArea',
+    items: [
+      { labelKey: 'nav.mySchedule', icon: 'pi pi-calendar-plus', to: '/me/schedule', roles: MEMBERS, hintKey: 'nav.hints.mySchedule' },
+      { labelKey: 'nav.myBookings', icon: 'pi pi-ticket', to: '/me/bookings', roles: MEMBERS, hintKey: 'nav.hints.myBookings' },
+      { labelKey: 'nav.myPass', icon: 'pi pi-qrcode', to: '/me/pass', roles: MEMBERS, hintKey: 'nav.hints.myPass' },
     ],
   },
   {

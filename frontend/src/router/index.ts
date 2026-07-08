@@ -93,6 +93,21 @@ const router = createRouter({
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
         },
+        {
+          path: 'me/schedule',
+          name: 'my-schedule',
+          component: () => import('@/views/member/MyScheduleView.vue'),
+        },
+        {
+          path: 'me/bookings',
+          name: 'my-bookings',
+          component: () => import('@/views/member/MyBookingsView.vue'),
+        },
+        {
+          path: 'me/pass',
+          name: 'my-pass',
+          component: () => import('@/views/member/MyPassView.vue'),
+        },
       ],
     },
     {
