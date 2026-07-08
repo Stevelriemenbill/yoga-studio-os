@@ -148,6 +148,8 @@ export default {
     course: 'Kurs',
     when: 'Wann',
     spots: 'Freie Plätze',
+    place: 'Ort',
+    online: 'Online',
     status: 'Status',
     action: 'Aktion',
     book: 'Buchen',
@@ -201,6 +203,8 @@ export default {
       'Diese Stunde absagen? Alle Buchungen werden storniert und die Teilnehmer benachrichtigt. Optional: Grund angeben.',
     cancelSuccess: 'Stunde abgesagt. Teilnehmer werden benachrichtigt.',
     cancelError: 'Stunde konnte nicht abgesagt werden.',
+    online: 'Online',
+    joinOnline: 'Online teilnehmen',
   },
   dashboard: {
     welcome: 'Willkommen',

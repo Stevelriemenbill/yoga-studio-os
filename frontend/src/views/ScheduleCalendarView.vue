@@ -205,10 +205,25 @@ onMounted(load)
         >
           <div class="slot-time">{{ fmtTime(s.starts_at) }}</div>
           <div class="slot-name">{{ courseName(s.course_id) }}</div>
+          <div v-if="s.effective_is_online" class="slot-place online">
+            <i class="pi pi-video" /> {{ t('calendar.online') }}
+          </div>
+          <div v-else-if="s.effective_location" class="slot-place">
+            <i class="pi pi-map-marker" /> {{ s.effective_location }}
+          </div>
 
           <!-- Member view: booking controls -->
           <template v-if="isMember">
             <Tag v-if="isBooked(s.id)" severity="success" :value="t('calendar.booked')" />
+            <a
+              v-if="isBooked(s.id) && s.effective_is_online && s.effective_online_url"
+              :href="s.effective_online_url"
+              target="_blank"
+              rel="noopener"
+              class="join-link"
+            >
+              <i class="pi pi-external-link" /> {{ t('calendar.joinOnline') }}
+            </a>
             <Tag
               v-else-if="isPast(s)"
               severity="secondary"
@@ -334,6 +349,27 @@ onMounted(load)
 .slot-name {
   font-weight: 600;
   font-size: 0.9rem;
+}
+.slot-place {
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.slot-place.online {
+  color: var(--p-primary-600, #059669);
+}
+.join-link {
+  font-size: 0.78rem;
+  color: var(--p-primary-600, #059669);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+}
+.join-link:hover {
+  text-decoration: underline;
 }
 .occupancy {
   font-size: 0.78rem;

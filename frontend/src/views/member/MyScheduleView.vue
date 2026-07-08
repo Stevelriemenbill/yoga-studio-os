@@ -97,6 +97,15 @@ onMounted(load)
       <Column :header="t('myArea.when')">
         <template #body="{ data }">{{ fmtWhen(data.starts_at) }}</template>
       </Column>
+      <Column :header="t('myArea.place')">
+        <template #body="{ data }">
+          <span v-if="data.effective_is_online" class="online">
+            <i class="pi pi-video" /> {{ t('myArea.online') }}
+          </span>
+          <span v-else-if="data.effective_location">{{ data.effective_location }}</span>
+          <span v-else class="muted">—</span>
+        </template>
+      </Column>
       <Column :header="t('myArea.spots')">
         <template #body="{ data }">{{ data.available_spots }}</template>
       </Column>
@@ -138,5 +147,11 @@ onMounted(load)
 }
 .muted {
   color: #6b7280;
+}
+.online {
+  color: var(--p-primary-600, #059669);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 </style>

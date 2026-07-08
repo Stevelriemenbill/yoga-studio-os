@@ -148,6 +148,8 @@ export default {
     course: 'Class',
     when: 'When',
     spots: 'Open spots',
+    place: 'Location',
+    online: 'Online',
     status: 'Status',
     action: 'Action',
     book: 'Book',
@@ -201,6 +203,8 @@ export default {
       'Cancel this session? All bookings will be cancelled and participants notified. Optionally give a reason.',
     cancelSuccess: 'Session cancelled. Participants will be notified.',
     cancelError: 'The session could not be cancelled.',
+    online: 'Online',
+    joinOnline: 'Join online',
   },
   dashboard: {
     welcome: 'Welcome',
