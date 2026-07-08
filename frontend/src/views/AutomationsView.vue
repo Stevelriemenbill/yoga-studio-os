@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -19,23 +20,25 @@ import {
 } from '@/api/automations'
 import type { AutomationRule, AutomationTrigger, NotificationChannel } from '@/types'
 
+const { t } = useI18n()
+
 const rules = ref<AutomationRule[]>([])
 const loading = ref(false)
 const error = ref('')
 const message = ref('')
 
-const triggerOptions: { label: string; value: AutomationTrigger }[] = [
-  { label: 'Inaktive Tage', value: 'inactive_days' },
-  { label: 'Nach Buchung', value: 'after_booking' },
-  { label: 'Vor Session', value: 'before_session' },
-  { label: 'Nach No-Show', value: 'after_no_show' },
-  { label: 'Mitgliedschaft läuft ab', value: 'membership_expiring' },
+const triggerOptions = (): { label: string; value: AutomationTrigger }[] => [
+  { label: t('automations.triggers.inactive_days'), value: 'inactive_days' },
+  { label: t('automations.triggers.after_booking'), value: 'after_booking' },
+  { label: t('automations.triggers.before_session'), value: 'before_session' },
+  { label: t('automations.triggers.after_no_show'), value: 'after_no_show' },
+  { label: t('automations.triggers.membership_expiring'), value: 'membership_expiring' },
 ]
 
 const channelOptions: { label: string; value: NotificationChannel }[] = [
-  { label: 'E-Mail', value: 'email' },
-  { label: 'Push', value: 'push' },
-  { label: 'WhatsApp', value: 'whatsapp' },
+  { label: t('automations.channels.email'), value: 'email' },
+  { label: t('automations.channels.push'), value: 'push' },
+  { label: t('automations.channels.whatsapp'), value: 'whatsapp' },
 ]
 
 const showDialog = ref(false)
@@ -60,7 +63,7 @@ async function load() {
   try {
     rules.value = await listAutomations()
   } catch {
-    error.value = 'Regeln konnten nicht geladen werden.'
+    error.value = t('automations.errors.loadFailed')
   } finally {
     loading.value = false
   }
@@ -91,7 +94,7 @@ async function save() {
     showDialog.value = false
     await load()
   } catch {
-    error.value = 'Regel konnte nicht gespeichert werden.'
+    error.value = t('automations.errors.saveFailed')
   } finally {
     saving.value = false
   }
@@ -102,7 +105,7 @@ async function toggleActive(rule: AutomationRule) {
   try {
     await updateAutomation(rule.id, { is_active: rule.is_active })
   } catch {
-    error.value = 'Status konnte nicht geändert werden.'
+    error.value = t('automations.errors.toggleFailed')
     rule.is_active = !rule.is_active
   }
 }
@@ -112,9 +115,9 @@ async function runNow() {
   message.value = ''
   try {
     const result = await runAutomations()
-    message.value = `${result.total_enqueued} Nachrichten eingereiht.`
+    message.value = t('automations.messages.enqueued', { count: result.total_enqueued })
   } catch {
-    error.value = 'Ausführung fehlgeschlagen.'
+    error.value = t('automations.errors.runFailed')
   }
 }
 
@@ -124,58 +127,60 @@ onMounted(load)
 <template>
   <div class="page">
     <div class="header">
-      <h1>Automatisierungen</h1>
+      <h1>{{ t('automations.title') }}</h1>
       <div class="actions">
-        <Button label="Jetzt ausführen" icon="pi pi-play" outlined @click="runNow" />
-        <Button label="Neue Regel" icon="pi pi-plus" @click="openDialog" />
+        <Button :label="t('automations.runNow')" icon="pi pi-play" outlined @click="runNow" />
+        <Button :label="t('automations.newRule')" icon="pi pi-plus" @click="openDialog" />
       </div>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="success">{{ message }}</p>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('automations.loading') }}</p>
 
     <DataTable v-else :value="rules" dataKey="id" responsiveLayout="scroll">
-      <Column field="name" header="Name" />
-      <Column field="trigger" header="Auslöser" />
-      <Column field="threshold_days" header="Schwelle (Tage)" />
-      <Column header="Kanal">
+      <Column field="name" :header="t('automations.columns.name')" />
+      <Column :header="t('automations.columns.trigger')">
+        <template #body="{ data }">{{ t(`automations.triggers.${data.trigger}`) }}</template>
+      </Column>
+      <Column field="threshold_days" :header="t('automations.columns.thresholdDays')" />
+      <Column :header="t('automations.columns.channel')">
         <template #body="{ data }"><Tag :value="data.channel" /></template>
       </Column>
-      <Column header="Aktiv">
+      <Column :header="t('automations.columns.active')">
         <template #body="{ data }">
           <InputSwitch v-model="data.is_active" @change="toggleActive(data)" />
         </template>
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showDialog" header="Neue Regel" modal :style="{ width: '480px' }">
+    <Dialog v-model:visible="showDialog" :header="t('automations.newRule')" modal :style="{ width: '480px' }">
       <div class="form">
-        <label>Name</label>
+        <label>{{ t('automations.form.name') }}</label>
         <InputText v-model="form.name" />
-        <label>Auslöser</label>
+        <label>{{ t('automations.form.trigger') }}</label>
         <Dropdown
           v-model="form.trigger"
-          :options="triggerOptions"
+          :options="triggerOptions()"
           optionLabel="label"
           optionValue="value"
         />
-        <label>Schwelle (Tage)</label>
+        <label>{{ t('automations.form.thresholdDays') }}</label>
         <InputNumber v-model="form.threshold_days" :min="0" />
-        <label>Kanal</label>
+        <label>{{ t('automations.form.channel') }}</label>
         <Dropdown
           v-model="form.channel"
           :options="channelOptions"
           optionLabel="label"
           optionValue="value"
         />
-        <label>Nachrichtenvorlage</label>
+        <label>{{ t('automations.form.messageTemplate') }}</label>
         <Textarea v-model="form.message_template" rows="4" autoResize />
-        <small class="hint">Platzhalter: {first_name}, {last_name}</small>
+        <small class="hint">{{ t('automations.form.placeholderHint') }}</small>
       </div>
       <template #footer>
-        <Button label="Abbrechen" text @click="showDialog = false" />
-        <Button label="Speichern" :loading="saving" @click="save" />
+        <Button :label="t('automations.form.cancel')" text @click="showDialog = false" />
+        <Button :label="t('automations.form.save')" :loading="saving" @click="save" />
       </template>
     </Dialog>
   </div>

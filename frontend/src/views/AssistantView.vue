@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
@@ -7,6 +8,8 @@ import Card from 'primevue/card'
 
 import { listInsights, generateInsights, askAssistant } from '@/api/care'
 import type { AIInsight } from '@/types'
+
+const { t, locale } = useI18n()
 
 const insights = ref<AIInsight[]>([])
 const answers = ref<AIInsight[]>([])
@@ -16,20 +19,20 @@ const generating = ref(false)
 const loading = ref(false)
 const error = ref('')
 
-const suggestions = [
-  'Um wen sollten wir uns gerade kümmern?',
-  'Wer feiert bald einen Meilenstein?',
-  'Wer ist neu dazugekommen?',
-]
+const suggestions = computed(() => [
+  t('assistant.suggestionCare'),
+  t('assistant.suggestionMilestone'),
+  t('assistant.suggestionNew'),
+])
 
-const typeLabel: Record<string, string> = {
-  care: 'Fürsorge',
-  milestone: 'Meilenstein',
-  assistant_answer: 'Antwort',
-}
+const typeLabel = computed<Record<string, string>>(() => ({
+  care: t('assistant.typeCare'),
+  milestone: t('assistant.typeMilestone'),
+  assistant_answer: t('assistant.typeAnswer'),
+}))
 
 function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('de-DE')
+  return new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US')
 }
 
 async function load() {
@@ -38,7 +41,7 @@ async function load() {
   try {
     insights.value = await listInsights()
   } catch {
-    error.value = 'Hinweise konnten nicht geladen werden.'
+    error.value = t('assistant.loadError')
   } finally {
     loading.value = false
   }
@@ -54,7 +57,7 @@ async function ask(preset?: string) {
     answers.value.unshift(insight)
     question.value = ''
   } catch {
-    error.value = 'Die Frage konnte nicht beantwortet werden.'
+    error.value = t('assistant.askError')
   } finally {
     asking.value = false
   }
@@ -66,7 +69,7 @@ async function refresh() {
   try {
     insights.value = await generateInsights()
   } catch {
-    error.value = 'Hinweise konnten nicht aktualisiert werden.'
+    error.value = t('assistant.refreshError')
   } finally {
     generating.value = false
   }
@@ -77,20 +80,19 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h1>Begleiter:in</h1>
+    <h1>{{ t('assistant.title') }}</h1>
     <p class="lead">
-      Ein ruhiger Gefährte, der dir hilft, deine Schüler:innen zu begleiten –
-      wer gerade Aufmerksamkeit braucht, wer bald etwas zu feiern hat, wer neu ist.
+      {{ t('assistant.lead') }}
     </p>
 
     <p v-if="error" class="error">{{ error }}</p>
 
     <Card class="block">
-      <template #title>Frag mich</template>
+      <template #title>{{ t('assistant.askMe') }}</template>
       <template #content>
         <div class="ask">
-          <Textarea v-model="question" rows="2" autoResize placeholder="Deine Frage zur Begleitung…" />
-          <Button label="Fragen" :loading="asking" @click="ask()" />
+          <Textarea v-model="question" rows="2" autoResize :placeholder="t('assistant.questionPlaceholder')" />
+          <Button :label="t('assistant.ask')" :loading="asking" @click="ask()" />
         </div>
         <div class="chips">
           <Button
@@ -112,12 +114,12 @@ onMounted(load)
     </Card>
 
     <div class="header">
-      <h2>Hinweise zur Begleitung</h2>
-      <Button label="Aktualisieren" icon="pi pi-refresh" outlined :loading="generating" @click="refresh" />
+      <h2>{{ t('assistant.insightsHeading') }}</h2>
+      <Button :label="t('assistant.refresh')" icon="pi pi-refresh" outlined :loading="generating" @click="refresh" />
     </div>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('assistant.loading') }}</p>
     <p v-else-if="insights.length === 0" class="muted">
-      Zurzeit gibt es keine Hinweise – eure Gemeinschaft praktiziert beständig.
+      {{ t('assistant.noInsights') }}
     </p>
     <div v-else class="cards">
       <Card v-for="i in insights" :key="i.id" class="insight">

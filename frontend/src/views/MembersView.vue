@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -12,20 +13,22 @@ import InputNumber from 'primevue/inputnumber'
 import { listMembers, createMember, updateMember, deleteMember, inviteMember } from '@/api/members'
 import type { Member, MembershipType } from '@/types'
 
+const { t } = useI18n()
+
 const members = ref<Member[]>([])
 const loading = ref(false)
 const error = ref('')
 const notice = ref('')
 
-const membershipOptions: { label: string; value: MembershipType }[] = [
-  { label: 'Keine', value: 'none' },
-  { label: 'Drop-in', value: 'drop_in' },
-  { label: '10er-Karte', value: 'punch_card' },
-  { label: 'Unbegrenzt', value: 'unlimited' },
+const membershipOptions = (): { label: string; value: MembershipType }[] => [
+  { label: t('members.membershipTypes.none'), value: 'none' },
+  { label: t('members.membershipTypes.drop_in'), value: 'drop_in' },
+  { label: t('members.membershipTypes.punch_card'), value: 'punch_card' },
+  { label: t('members.membershipTypes.unlimited'), value: 'unlimited' },
 ]
 
 function membershipLabel(value: string): string {
-  return membershipOptions.find((o) => o.value === value)?.label ?? value
+  return membershipOptions().find((o) => o.value === value)?.label ?? value
 }
 
 const showDialog = ref(false)
@@ -57,7 +60,7 @@ async function load() {
   try {
     members.value = await listMembers()
   } catch {
-    error.value = 'Mitglieder konnten nicht geladen werden.'
+    error.value = t('members.errors.loadFailed')
   } finally {
     loading.value = false
   }
@@ -109,20 +112,20 @@ async function save() {
     showDialog.value = false
     await load()
   } catch {
-    error.value = 'Mitglied konnte nicht gespeichert werden.'
+    error.value = t('members.errors.saveFailed')
   } finally {
     saving.value = false
   }
 }
 
 async function remove(m: Member) {
-  if (!confirm(`Mitglied ${m.first_name} ${m.last_name} löschen?`)) return
+  if (!confirm(t('members.confirmDelete', { name: `${m.first_name} ${m.last_name}` }))) return
   error.value = ''
   try {
     await deleteMember(m.id)
     await load()
   } catch {
-    error.value = 'Mitglied konnte nicht gelöscht werden.'
+    error.value = t('members.errors.deleteFailed')
   }
 }
 
@@ -132,29 +135,25 @@ async function invite(m: Member) {
   error.value = ''
   notice.value = ''
   if (!m.email) {
-    error.value = `${m.first_name} hat keine E-Mail-Adresse hinterlegt.`
+    error.value = t('members.errors.noEmail', { name: m.first_name })
     return
   }
   inviting.value = m.id
   try {
     const { invite_url, email_delivered } = await inviteMember(m.id)
     if (email_delivered) {
-      notice.value = `Einladung per E-Mail an ${m.email} versendet.`
+      notice.value = t('members.invite.emailSent', { email: m.email })
     } else {
       // Kein echter Mailversand konfiguriert: Link ehrlich anzeigen.
       try {
         await navigator.clipboard.writeText(invite_url)
-        notice.value =
-          `Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). ` +
-          `Einladungslink für ${m.email} wurde in die Zwischenablage kopiert: ${invite_url}`
+        notice.value = t('members.invite.copiedToClipboard', { email: m.email, url: invite_url })
       } catch {
-        notice.value =
-          `Es wird noch keine E-Mail versendet (kein Mailversand konfiguriert). ` +
-          `Bitte diesen Einladungslink an ${m.email} weitergeben: ${invite_url}`
+        notice.value = t('members.invite.shareManually', { email: m.email, url: invite_url })
       }
     }
   } catch {
-    error.value = 'Einladung konnte nicht erstellt werden.'
+    error.value = t('members.errors.inviteFailed')
   } finally {
     inviting.value = null
   }
@@ -166,33 +165,33 @@ onMounted(load)
 <template>
   <div class="page">
     <div class="header">
-      <h1>Mitglieder</h1>
-      <Button label="Neues Mitglied" icon="pi pi-plus" @click="openCreate" />
+      <h1>{{ t('members.title') }}</h1>
+      <Button :label="t('members.newMember')" icon="pi pi-plus" @click="openCreate" />
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="notice" class="notice">{{ notice }}</p>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('members.loading') }}</p>
 
     <DataTable v-else :value="members" dataKey="id" responsiveLayout="scroll">
-      <Column field="first_name" header="Vorname" />
-      <Column field="last_name" header="Nachname" />
-      <Column field="email" header="E-Mail" />
-      <Column header="Mitgliedschaft">
+      <Column field="first_name" :header="t('members.columns.firstName')" />
+      <Column field="last_name" :header="t('members.columns.lastName')" />
+      <Column field="email" :header="t('members.columns.email')" />
+      <Column :header="t('members.columns.membership')">
         <template #body="{ data }">
           <Tag :value="membershipLabel(data.membership_type)" />
         </template>
       </Column>
-      <Column field="credits" header="Guthaben" />
-      <Column header="Zuverlässigkeit">
+      <Column field="credits" :header="t('members.columns.credits')" />
+      <Column :header="t('members.columns.reliability')">
         <template #body="{ data }">{{ fmtScore(data.reliability_score) }}</template>
       </Column>
-      <Column header="Konto">
+      <Column :header="t('members.columns.account')">
         <template #body="{ data }">
-          <Tag v-if="data.user_id" value="Aktiviert" severity="success" />
+          <Tag v-if="data.user_id" :value="t('members.activated')" severity="success" />
           <Button
             v-else
-            label="Einladen"
+            :label="t('members.inviteButton')"
             icon="pi pi-envelope"
             size="small"
             text
@@ -202,7 +201,7 @@ onMounted(load)
           />
         </template>
       </Column>
-      <Column header="Aktionen">
+      <Column :header="t('members.columns.actions')">
         <template #body="{ data }">
           <Button icon="pi pi-pencil" size="small" text @click="openEdit(data)" />
           <Button
@@ -218,32 +217,32 @@ onMounted(load)
 
     <Dialog
       v-model:visible="showDialog"
-      :header="editingId ? 'Mitglied bearbeiten' : 'Neues Mitglied'"
+      :header="editingId ? t('members.dialog.editTitle') : t('members.dialog.createTitle')"
       modal
       :style="{ width: '460px' }"
     >
       <div class="form">
-        <label>Vorname</label>
+        <label>{{ t('members.form.firstName') }}</label>
         <InputText v-model="form.first_name" />
-        <label>Nachname</label>
+        <label>{{ t('members.form.lastName') }}</label>
         <InputText v-model="form.last_name" />
-        <label>E-Mail</label>
+        <label>{{ t('members.form.email') }}</label>
         <InputText v-model="form.email" />
-        <label>Telefon</label>
+        <label>{{ t('members.form.phone') }}</label>
         <InputText v-model="form.phone" />
-        <label>Mitgliedschaft</label>
+        <label>{{ t('members.form.membership') }}</label>
         <Dropdown
           v-model="form.membership_type"
-          :options="membershipOptions"
+          :options="membershipOptions()"
           optionLabel="label"
           optionValue="value"
         />
-        <label>Guthaben</label>
+        <label>{{ t('members.form.credits') }}</label>
         <InputNumber v-model="form.credits" :min="0" />
       </div>
       <template #footer>
-        <Button label="Abbrechen" text @click="showDialog = false" />
-        <Button label="Speichern" :loading="saving" @click="save" />
+        <Button :label="t('members.form.cancel')" text @click="showDialog = false" />
+        <Button :label="t('members.form.save')" :loading="saving" @click="save" />
       </template>
     </Dialog>
   </div>

@@ -7,8 +7,11 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
 
+import { useI18n } from 'vue-i18n'
+
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
@@ -39,32 +42,32 @@ async function submit() {
 
 function extractError(e: unknown): string {
   const err = e as { response?: { data?: { detail?: string } } }
-  return err.response?.data?.detail ?? 'Anmeldung fehlgeschlagen'
+  return err.response?.data?.detail ?? t('auth.login.failed')
 }
 </script>
 
 <template>
   <div class="auth-page">
     <Card class="auth-card">
-      <template #title>Anmelden</template>
-      <template #subtitle>Studio OS</template>
+      <template #title>{{ t('auth.login.title') }}</template>
+      <template #subtitle>{{ t('common.appName') }}</template>
       <template #content>
         <form class="auth-form" @submit.prevent="submit">
           <label>
-            Studio-Kürzel
+            {{ t('auth.studioSlug') }}
             <InputText v-model="tenantSlug" placeholder="zen-flow" autocomplete="organization" />
           </label>
           <label>
-            E-Mail
+            {{ t('auth.email') }}
             <InputText v-model="email" type="email" autocomplete="email" />
           </label>
           <label>
-            Passwort
+            {{ t('auth.password') }}
             <Password v-model="password" :feedback="false" toggle-mask fluid />
           </label>
           <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
-          <Button type="submit" label="Anmelden" :loading="loading" />
-          <RouterLink to="/register">Neues Studio registrieren</RouterLink>
+          <Button type="submit" :label="t('auth.login.title')" :loading="loading" />
+          <RouterLink to="/register">{{ t('auth.login.registerLink') }}</RouterLink>
         </form>
       </template>
     </Card>

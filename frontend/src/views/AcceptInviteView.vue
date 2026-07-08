@@ -8,7 +8,9 @@ import Message from 'primevue/message'
 
 import { acceptInvite, previewInvite, type InvitedMember } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
@@ -30,7 +32,7 @@ onMounted(async () => {
   try {
     invite.value = await previewInvite(token)
   } catch (e: unknown) {
-    error.value = extractError(e, 'Diese Einladung ist ungültig oder abgelaufen.')
+    error.value = extractError(e, t('auth.invite.invalid'))
   } finally {
     loading.value = false
   }
@@ -39,11 +41,11 @@ onMounted(async () => {
 async function submit() {
   error.value = null
   if (password.value.length < 8) {
-    error.value = 'Das Passwort muss mindestens 8 Zeichen lang sein.'
+    error.value = t('auth.invite.passwordTooShort')
     return
   }
   if (password.value !== confirm.value) {
-    error.value = 'Die Passwörter stimmen nicht überein.'
+    error.value = t('auth.invite.passwordMismatch')
     return
   }
   submitting.value = true
@@ -52,7 +54,7 @@ async function submit() {
     auth.applySession(result.token, result.user)
     await router.push('/')
   } catch (e: unknown) {
-    error.value = extractError(e, 'Konto konnte nicht aktiviert werden.')
+    error.value = extractError(e, t('auth.invite.activateFailed'))
   } finally {
     submitting.value = false
   }
@@ -62,36 +64,36 @@ async function submit() {
 <template>
   <div class="auth-page">
     <Card class="auth-card">
-      <template #title>Konto aktivieren</template>
+      <template #title>{{ t('auth.invite.title') }}</template>
       <template #subtitle>
-        {{ invite ? invite.studio_name : 'Studio OS' }}
+        {{ invite ? invite.studio_name : t('common.appName') }}
       </template>
       <template #content>
-        <p v-if="loading">Einladung wird geprüft…</p>
+        <p v-if="loading">{{ t('auth.invite.checking') }}</p>
 
         <Message
           v-else-if="!invite"
           severity="error"
           :closable="false"
         >
-          {{ error ?? 'Einladung ungültig.' }}
+          {{ error ?? t('auth.invite.invalidShort') }}
         </Message>
 
         <form v-else class="auth-form" @submit.prevent="submit">
-          <p class="welcome">
-            Hallo <strong>{{ invite.first_name }}</strong>, lege ein Passwort fest,
-            um dein Konto ({{ invite.email }}) zu aktivieren.
-          </p>
+          <i18n-t keypath="auth.invite.welcome" tag="p" class="welcome">
+            <template #name><strong>{{ invite.first_name }}</strong></template>
+            <template #email>{{ invite.email }}</template>
+          </i18n-t>
           <label>
-            Passwort
+            {{ t('auth.password') }}
             <Password v-model="password" toggle-mask fluid />
           </label>
           <label>
-            Passwort bestätigen
+            {{ t('auth.invite.confirmPassword') }}
             <Password v-model="confirm" :feedback="false" toggle-mask fluid />
           </label>
           <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
-          <Button type="submit" label="Konto aktivieren" :loading="submitting" />
+          <Button type="submit" :label="t('auth.invite.title')" :loading="submitting" />
         </form>
       </template>
     </Card>

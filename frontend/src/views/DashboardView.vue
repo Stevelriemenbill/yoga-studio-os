@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 
@@ -9,18 +10,10 @@ import { getCommunityPulse } from '@/api/analytics'
 import type { CommunityPulse } from '@/types'
 
 const auth = useAuthStore()
-
-const roleLabels: Record<string, string> = {
-  studio_admin: 'Studio-Administrator',
-  studio_manager: 'Studio-Manager',
-  teacher: 'Lehrer',
-  reception: 'Empfang',
-  member: 'Mitglied',
-  trainee: 'Yogalehrer in Ausbildung',
-}
+const { t, locale } = useI18n()
 
 const roleLabel = computed(() =>
-  auth.user ? (roleLabels[auth.user.role] ?? auth.user.role) : '',
+  auth.user ? t(`roles.${auth.user.role}`) : '',
 )
 
 const kpis = ref<CommunityPulse | null>(null)
@@ -29,7 +22,7 @@ const events = ref<string[]>([])
 
 const { connected } = useRealtime((event) => {
   events.value.unshift(
-    `${new Date(event.ts).toLocaleTimeString('de-DE')} — ${event.type}`,
+    `${new Date(event.ts).toLocaleTimeString(locale.value === 'de' ? 'de-DE' : 'en-US')} — ${event.type}`,
   )
   events.value = events.value.slice(0, 10)
 })
@@ -49,39 +42,39 @@ onMounted(async () => {
   <div class="dashboard">
     <div class="head">
       <div>
-        <h1>Willkommen{{ auth.user?.full_name ? `, ${auth.user.full_name}` : '' }}</h1>
-        <p class="subtitle">Studio Operating System</p>
+        <h1>{{ auth.user?.full_name ? t('dashboard.welcomenamed', { name: auth.user.full_name }) : t('dashboard.welcome') }}</h1>
+        <p class="subtitle">{{ t('dashboard.subtitle') }}</p>
       </div>
       <Tag
-        :value="connected ? 'Live verbunden' : 'Offline'"
+        :value="connected ? t('dashboard.liveConnected') : t('dashboard.offline')"
         :severity="connected ? 'success' : 'warning'"
         :icon="connected ? 'pi pi-circle-fill' : 'pi pi-circle'"
       />
     </div>
 
     <div v-if="kpis" class="kpis">
-      <Card><template #content><span class="k-label">Menschen, die praktizieren</span><span class="k-val">{{ kpis.people_practicing }}</span></template></Card>
-      <Card><template #content><span class="k-label">Gemeinsame Einheiten (30 T.)</span><span class="k-val">{{ kpis.total_practices }}</span></template></Card>
-      <Card><template #content><span class="k-label">Angebotene Stunden</span><span class="k-val">{{ kpis.sessions }}</span></template></Card>
-      <Card><template #content><span class="k-label">Neu dazugekommen</span><span class="k-val">{{ kpis.new_members }}</span></template></Card>
+      <Card><template #content><span class="k-label">{{ t('dashboard.peoplePracticing') }}</span><span class="k-val">{{ kpis.people_practicing }}</span></template></Card>
+      <Card><template #content><span class="k-label">{{ t('dashboard.sharedPractices') }}</span><span class="k-val">{{ kpis.total_practices }}</span></template></Card>
+      <Card><template #content><span class="k-label">{{ t('dashboard.sessionsOffered') }}</span><span class="k-val">{{ kpis.sessions }}</span></template></Card>
+      <Card><template #content><span class="k-label">{{ t('dashboard.newMembers') }}</span><span class="k-val">{{ kpis.new_members }}</span></template></Card>
     </div>
 
     <div class="grid">
       <Card>
-        <template #title>Dein Konto</template>
+        <template #title>{{ t('dashboard.yourAccount') }}</template>
         <template #content>
-          <p><strong>E-Mail:</strong> {{ auth.user?.email }}</p>
-          <p><strong>Rolle:</strong> <Tag :value="roleLabel" severity="success" /></p>
+          <p><strong>{{ t('dashboard.email') }}:</strong> {{ auth.user?.email }}</p>
+          <p><strong>{{ t('dashboard.role') }}:</strong> <Tag :value="roleLabel" severity="success" /></p>
         </template>
       </Card>
 
       <Card>
-        <template #title>Live-Ereignisse</template>
+        <template #title>{{ t('dashboard.liveEvents') }}</template>
         <template #content>
           <ul v-if="events.length" class="events">
             <li v-for="(e, i) in events" :key="i">{{ e }}</li>
           </ul>
-          <p v-else class="muted">Noch keine Ereignisse. Aktivität erscheint hier in Echtzeit.</p>
+          <p v-else class="muted">{{ t('dashboard.noEvents') }}</p>
         </template>
       </Card>
     </div>

@@ -7,8 +7,11 @@ import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Message from 'primevue/message'
 
+import { useI18n } from 'vue-i18n'
+
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -56,40 +59,40 @@ function extractError(e: unknown): string {
   const detail = err.response?.data?.detail
   if (typeof detail === 'string') return detail
   if (Array.isArray(detail) && detail[0]?.msg) return String(detail[0].msg)
-  return 'Registrierung fehlgeschlagen'
+  return t('auth.register.failed')
 }
 </script>
 
 <template>
   <div class="auth-page">
     <Card class="auth-card">
-      <template #title>Studio registrieren</template>
-      <template #subtitle>Erstelle dein Studio und Admin-Konto</template>
+      <template #title>{{ t('auth.register.title') }}</template>
+      <template #subtitle>{{ t('auth.register.subtitle') }}</template>
       <template #content>
         <form class="auth-form" @submit.prevent="submit">
           <label>
-            Studio-Name
+            {{ t('auth.register.studioName') }}
             <InputText v-model="studioName" @input="onNameInput" />
           </label>
           <label>
-            Studio-Kürzel (URL)
+            {{ t('auth.register.studioSlugUrl') }}
             <InputText v-model="studioSlug" placeholder="zen-flow" />
           </label>
           <label>
-            Dein Name
+            {{ t('auth.register.yourName') }}
             <InputText v-model="adminFullName" />
           </label>
           <label>
-            E-Mail
+            {{ t('auth.email') }}
             <InputText v-model="adminEmail" type="email" autocomplete="email" />
           </label>
           <label>
-            Passwort (min. 8 Zeichen)
+            {{ t('auth.register.passwordMin') }}
             <Password v-model="adminPassword" toggle-mask fluid />
           </label>
           <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
-          <Button type="submit" label="Studio erstellen" :loading="loading" />
-          <RouterLink to="/login">Zurück zur Anmeldung</RouterLink>
+          <Button type="submit" :label="t('auth.register.submit')" :loading="loading" />
+          <RouterLink to="/login">{{ t('auth.register.backToLogin') }}</RouterLink>
         </form>
       </template>
     </Card>

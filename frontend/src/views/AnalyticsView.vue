@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Card from 'primevue/card'
 
 import { getCommunityPulse, getTeacherReach } from '@/api/analytics'
 import type { CommunityPulse, TeacherReach } from '@/types'
+
+const { t } = useI18n()
 
 const pulse = ref<CommunityPulse | null>(null)
 const teachers = ref<TeacherReach[]>([])
@@ -19,7 +22,7 @@ async function load() {
     pulse.value = await getCommunityPulse()
     teachers.value = await getTeacherReach()
   } catch {
-    error.value = 'Die Übersicht konnte nicht geladen werden.'
+    error.value = t('analytics.loadError')
   } finally {
     loading.value = false
   }
@@ -30,32 +33,31 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h1>Gemeinschaft</h1>
+    <h1>{{ t('analytics.title') }}</h1>
     <p class="lead">
-      Ein sanfter Blick darauf, wie es eurer Gemeinschaft geht – keine Zahlen zum
-      Optimieren, sondern ein Gefühl für die Menschen, die zusammen praktizieren.
+      {{ t('analytics.lead') }}
     </p>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('analytics.loading') }}</p>
 
     <template v-else-if="pulse">
       <div class="kpis">
-        <Card><template #content><span class="k-label">Menschen, die praktizieren</span><span class="k-val">{{ pulse.people_practicing }}</span></template></Card>
-        <Card><template #content><span class="k-label">Gemeinsame Praxis-Stunden</span><span class="k-val">{{ pulse.total_practices }}</span></template></Card>
-        <Card><template #content><span class="k-label">Neu dazugekommen</span><span class="k-val">{{ pulse.new_members }}</span></template></Card>
-        <Card><template #content><span class="k-label">Angebotene Stunden</span><span class="k-val">{{ pulse.sessions }}</span></template></Card>
+        <Card><template #content><span class="k-label">{{ t('analytics.peoplePracticing') }}</span><span class="k-val">{{ pulse.people_practicing }}</span></template></Card>
+        <Card><template #content><span class="k-label">{{ t('analytics.sharedPracticeHours') }}</span><span class="k-val">{{ pulse.total_practices }}</span></template></Card>
+        <Card><template #content><span class="k-label">{{ t('analytics.newMembers') }}</span><span class="k-val">{{ pulse.new_members }}</span></template></Card>
+        <Card><template #content><span class="k-label">{{ t('analytics.sessionsOffered') }}</span><span class="k-val">{{ pulse.sessions }}</span></template></Card>
       </div>
 
-      <h2>Wen die Lehrenden begleiten</h2>
+      <h2>{{ t('analytics.teachersHeading') }}</h2>
       <p class="lead">
-        Wie viele Menschen eine Lehrkraft begleitet – und wie viele gerne wiederkommen.
+        {{ t('analytics.teachersLead') }}
       </p>
       <DataTable :value="teachers" dataKey="teacher_id" responsiveLayout="scroll">
-        <Column field="teacher_id" header="Lehrkraft" />
-        <Column field="sessions" header="Stunden" />
-        <Column field="students_guided" header="Begleitete Menschen" />
-        <Column field="returning_students" header="Kommen wieder" />
+        <Column field="teacher_id" :header="t('analytics.colTeacher')" />
+        <Column field="sessions" :header="t('analytics.colSessions')" />
+        <Column field="students_guided" :header="t('analytics.colStudentsGuided')" />
+        <Column field="returning_students" :header="t('analytics.colReturning')" />
       </DataTable>
     </template>
   </div>

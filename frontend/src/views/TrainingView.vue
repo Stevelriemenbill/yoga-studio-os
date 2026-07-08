@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -19,6 +20,8 @@ import {
   trainingCsvUrl,
 } from '@/api/training'
 import type { Member, TrainingDashboard, TrainingHours } from '@/types'
+
+const { t, locale } = useI18n()
 
 const members = ref<Member[]>([])
 const traineeId = ref('')
@@ -53,14 +56,14 @@ function pctProgress(p: number | null): number {
 }
 
 function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE')
+  return new Date(iso).toLocaleDateString(locale.value === 'de' ? 'de-DE' : 'en-US')
 }
 
 async function loadMembers() {
   try {
     members.value = await listMembers()
   } catch {
-    error.value = 'Mitglieder konnten nicht geladen werden.'
+    error.value = t('training.errors.membersLoadFailed')
   }
 }
 
@@ -72,7 +75,7 @@ async function loadTrainee() {
     dashboard.value = await getTrainingDashboard(traineeId.value)
     hours.value = await listTrainingHours(traineeId.value)
   } catch {
-    error.value = 'Ausbildungsdaten konnten nicht geladen werden.'
+    error.value = t('training.errors.dataLoadFailed')
   } finally {
     loading.value = false
   }
@@ -92,7 +95,7 @@ async function submitLog() {
     logForm.value = { area: '', hours: 1, entry_date: new Date(), note: '' }
     await loadTrainee()
   } catch {
-    error.value = 'Stunden konnten nicht gespeichert werden.'
+    error.value = t('training.errors.hoursSaveFailed')
   }
 }
 
@@ -101,7 +104,7 @@ onMounted(loadMembers)
 
 <template>
   <div class="page">
-    <h1>Ausbildung</h1>
+    <h1>{{ t('training.title') }}</h1>
 
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -113,54 +116,54 @@ onMounted(loadMembers)
             :options="memberOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Auszubildende:n wählen"
+            :placeholder="t('training.selectTrainee')"
             filter
           />
-          <Button label="Laden" :loading="loading" :disabled="!traineeId" @click="loadTrainee" />
+          <Button :label="t('training.load')" :loading="loading" :disabled="!traineeId" @click="loadTrainee" />
           <a v-if="traineeId" :href="csvUrl" download class="csv-link">
-            <Button label="CSV exportieren" icon="pi pi-download" text />
+            <Button :label="t('training.exportCsv')" icon="pi pi-download" text />
           </a>
         </div>
       </template>
     </Card>
 
     <template v-if="dashboard">
-      <h2>Fortschritt: {{ dashboard.total_completed }} / {{ dashboard.total_required }} Stunden</h2>
+      <h2>{{ t('training.progressHeading', { completed: dashboard.total_completed, required: dashboard.total_required }) }}</h2>
 
       <DataTable :value="dashboard.breakdown" responsiveLayout="scroll">
-        <Column field="area" header="Bereich" />
-        <Column field="completed_hours" header="Absolviert" />
-        <Column field="required_hours" header="Erforderlich" />
-        <Column header="Fortschritt">
+        <Column field="area" :header="t('training.columns.area')" />
+        <Column field="completed_hours" :header="t('training.columns.completed')" />
+        <Column field="required_hours" :header="t('training.columns.required')" />
+        <Column :header="t('training.columns.progress')">
           <template #body="{ data }">
             <ProgressBar :value="pctProgress(data.progress)" />
           </template>
         </Column>
       </DataTable>
 
-      <h2>Erfasste Stunden</h2>
+      <h2>{{ t('training.recordedHours') }}</h2>
       <DataTable :value="hours" dataKey="id" responsiveLayout="scroll">
-        <Column field="area" header="Bereich" />
-        <Column field="hours" header="Stunden" />
-        <Column header="Datum">
+        <Column field="area" :header="t('training.columns.area')" />
+        <Column field="hours" :header="t('training.columns.hours')" />
+        <Column :header="t('training.columns.date')">
           <template #body="{ data }">{{ fmtDate(data.entry_date) }}</template>
         </Column>
-        <Column field="note" header="Notiz" />
+        <Column field="note" :header="t('training.columns.note')" />
       </DataTable>
 
       <Card class="block">
-        <template #title>Stunden erfassen</template>
+        <template #title>{{ t('training.logHours.title') }}</template>
         <template #content>
           <div class="form">
-            <label>Bereich</label>
+            <label>{{ t('training.logHours.area') }}</label>
             <InputText v-model="logForm.area" />
-            <label>Stunden</label>
+            <label>{{ t('training.logHours.hours') }}</label>
             <InputNumber v-model="logForm.hours" :min="0" :maxFractionDigits="2" />
-            <label>Datum</label>
+            <label>{{ t('training.logHours.date') }}</label>
             <DatePicker v-model="logForm.entry_date" dateFormat="dd.mm.yy" />
-            <label>Notiz</label>
+            <label>{{ t('training.logHours.note') }}</label>
             <Textarea v-model="logForm.note" rows="2" autoResize />
-            <Button label="Speichern" :disabled="!logForm.area" @click="submitLog" />
+            <Button :label="t('training.logHours.save')" :disabled="!logForm.area" @click="submitLog" />
           </div>
         </template>
       </Card>

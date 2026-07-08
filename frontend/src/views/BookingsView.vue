@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -19,6 +20,8 @@ import {
 } from '@/api/bookings'
 import { listMembers } from '@/api/members'
 import type { Booking, WaitlistEntry, Member } from '@/types'
+
+const { t, locale } = useI18n()
 
 const sessionId = ref('')
 const members = ref<Member[]>([])
@@ -40,14 +43,14 @@ const memberOptions = computed(() =>
 )
 
 function fmtDateTime(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString('de-DE') : '—'
+  return iso ? new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US') : '—'
 }
 
 async function loadMembers() {
   try {
     members.value = await listMembers()
   } catch {
-    error.value = 'Mitglieder konnten nicht geladen werden.'
+    error.value = t('bookings.errors.loadMembers')
   }
 }
 
@@ -59,7 +62,7 @@ async function loadSession() {
     bookings.value = await listSessionBookings(sessionId.value)
     waitlist.value = await listWaitlist(sessionId.value)
   } catch {
-    error.value = 'Buchungen konnten nicht geladen werden.'
+    error.value = t('bookings.errors.loadBookings')
   } finally {
     loading.value = false
   }
@@ -77,7 +80,7 @@ async function submitBooking() {
     bookingForm.value = { member_id: '', drop_in: false }
     await loadSession()
   } catch {
-    error.value = 'Buchung fehlgeschlagen.'
+    error.value = t('bookings.errors.booking')
   }
 }
 
@@ -87,7 +90,7 @@ async function doCancel(b: Booking) {
     await cancelBooking(b.id)
     await loadSession()
   } catch {
-    error.value = 'Stornierung fehlgeschlagen.'
+    error.value = t('bookings.errors.cancel')
   }
 }
 
@@ -97,7 +100,7 @@ async function doAccept(w: WaitlistEntry) {
     await acceptOffer(w.id)
     await loadSession()
   } catch {
-    error.value = 'Annahme fehlgeschlagen.'
+    error.value = t('bookings.errors.accept')
   }
 }
 
@@ -107,7 +110,7 @@ async function doDecline(w: WaitlistEntry) {
     await declineOffer(w.id)
     await loadSession()
   } catch {
-    error.value = 'Ablehnung fehlgeschlagen.'
+    error.value = t('bookings.errors.decline')
   }
 }
 
@@ -116,22 +119,22 @@ onMounted(loadMembers)
 
 <template>
   <div class="page">
-    <h1>Buchungen</h1>
+    <h1>{{ t('bookings.title') }}</h1>
 
     <p v-if="error" class="error">{{ error }}</p>
 
     <Card class="block">
-      <template #title>Session laden</template>
+      <template #title>{{ t('bookings.loadSession') }}</template>
       <template #content>
         <div class="row">
-          <InputText v-model="sessionId" placeholder="Session-ID" />
-          <Button label="Buchungen laden" :loading="loading" @click="loadSession" />
+          <InputText v-model="sessionId" :placeholder="t('bookings.sessionIdPlaceholder')" />
+          <Button :label="t('bookings.loadBookings')" :loading="loading" @click="loadSession" />
         </div>
       </template>
     </Card>
 
     <Card class="block">
-      <template #title>Neue Buchung</template>
+      <template #title>{{ t('bookings.newBooking') }}</template>
       <template #content>
         <div class="row">
           <Dropdown
@@ -139,15 +142,15 @@ onMounted(loadMembers)
             :options="memberOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Mitglied wählen"
+            :placeholder="t('bookings.selectMember')"
             filter
           />
           <div class="check">
             <Checkbox v-model="bookingForm.drop_in" :binary="true" inputId="dropin" />
-            <label for="dropin">Drop-in</label>
+            <label for="dropin">{{ t('bookings.dropIn') }}</label>
           </div>
           <Button
-            label="Buchen"
+            :label="t('bookings.book')"
             :disabled="!sessionId || !bookingForm.member_id"
             @click="submitBooking"
           />
@@ -155,20 +158,20 @@ onMounted(loadMembers)
       </template>
     </Card>
 
-    <h2>Buchungen</h2>
+    <h2>{{ t('bookings.bookingsHeading') }}</h2>
     <DataTable :value="bookings" dataKey="id" responsiveLayout="scroll">
-      <Column field="member_id" header="Mitglied" />
-      <Column header="Status">
+      <Column field="member_id" :header="t('bookings.columns.member')" />
+      <Column :header="t('bookings.columns.status')">
         <template #body="{ data }"><Tag :value="data.status" /></template>
       </Column>
-      <Column field="source" header="Quelle" />
-      <Column header="Gebucht am">
+      <Column field="source" :header="t('bookings.columns.source')" />
+      <Column :header="t('bookings.columns.bookedAt')">
         <template #body="{ data }">{{ fmtDateTime(data.booked_at) }}</template>
       </Column>
-      <Column header="Aktionen">
+      <Column :header="t('bookings.columns.actions')">
         <template #body="{ data }">
           <Button
-            label="Stornieren"
+            :label="t('bookings.actions.cancel')"
             size="small"
             text
             severity="danger"
@@ -178,21 +181,21 @@ onMounted(loadMembers)
       </Column>
     </DataTable>
 
-    <h2>Warteliste</h2>
+    <h2>{{ t('bookings.waitlistHeading') }}</h2>
     <DataTable :value="waitlist" dataKey="id" responsiveLayout="scroll">
-      <Column field="member_id" header="Mitglied" />
-      <Column header="Status">
+      <Column field="member_id" :header="t('bookings.columns.member')" />
+      <Column :header="t('bookings.columns.status')">
         <template #body="{ data }"><Tag :value="data.status" /></template>
       </Column>
-      <Column field="priority" header="Priorität" />
-      <Column header="Beigetreten">
+      <Column field="priority" :header="t('bookings.columns.priority')" />
+      <Column :header="t('bookings.columns.joinedAt')">
         <template #body="{ data }">{{ fmtDateTime(data.joined_at) }}</template>
       </Column>
-      <Column header="Aktionen">
+      <Column :header="t('bookings.columns.actions')">
         <template #body="{ data }">
-          <Button label="Annehmen" size="small" text @click="doAccept(data)" />
+          <Button :label="t('bookings.actions.accept')" size="small" text @click="doAccept(data)" />
           <Button
-            label="Ablehnen"
+            :label="t('bookings.actions.decline')"
             size="small"
             text
             severity="danger"

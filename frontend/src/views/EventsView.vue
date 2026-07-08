@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -22,15 +23,17 @@ import {
 import { listMembers } from '@/api/members'
 import type { StudioEvent, EventRegistration, EventType, Member } from '@/types'
 
+const { t, locale } = useI18n()
+
 const events = ref<StudioEvent[]>([])
 const members = ref<Member[]>([])
 const loading = ref(false)
 const error = ref('')
 
 const typeOptions: { label: string; value: EventType }[] = [
-  { label: 'Workshop', value: 'workshop' },
-  { label: 'Retreat', value: 'retreat' },
-  { label: 'Special', value: 'special' },
+  { label: t('events.types.workshop'), value: 'workshop' },
+  { label: t('events.types.retreat'), value: 'retreat' },
+  { label: t('events.types.special'), value: 'special' },
 ]
 
 const memberOptions = computed(() =>
@@ -41,7 +44,7 @@ const memberOptions = computed(() =>
 )
 
 function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('de-DE')
+  return new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US')
 }
 function eur(cents: number): string {
   return (cents / 100).toFixed(2) + ' €'
@@ -85,7 +88,7 @@ async function load() {
     events.value = await listEvents()
     members.value = await listMembers()
   } catch {
-    error.value = 'Events konnten nicht geladen werden.'
+    error.value = t('events.errors.loadEvents')
   } finally {
     loading.value = false
   }
@@ -125,7 +128,7 @@ async function saveEvent() {
     showEventDialog.value = false
     await load()
   } catch {
-    error.value = 'Event konnte nicht gespeichert werden.'
+    error.value = t('events.errors.saveEvent')
   } finally {
     savingEvent.value = false
   }
@@ -144,7 +147,7 @@ async function loadRegistrations() {
   try {
     registrations.value = await listRegistrations(activeEvent.value.id)
   } catch {
-    error.value = 'Anmeldungen konnten nicht geladen werden.'
+    error.value = t('events.errors.loadRegistrations')
   }
 }
 
@@ -156,7 +159,7 @@ async function doRegister() {
     regMemberId.value = ''
     await loadRegistrations()
   } catch {
-    error.value = 'Anmeldung fehlgeschlagen.'
+    error.value = t('events.errors.register')
   }
 }
 
@@ -167,7 +170,7 @@ async function doPay(reg: EventRegistration) {
     await confirmPayment(reg.id, activeEvent.value.deposit_cents)
     await loadRegistrations()
   } catch {
-    error.value = 'Zahlung fehlgeschlagen.'
+    error.value = t('events.errors.payment')
   }
 }
 
@@ -177,7 +180,7 @@ async function doCancelReg(reg: EventRegistration) {
     await cancelRegistration(reg.id)
     await loadRegistrations()
   } catch {
-    error.value = 'Stornierung fehlgeschlagen.'
+    error.value = t('events.errors.cancel')
   }
 }
 
@@ -187,72 +190,72 @@ onMounted(load)
 <template>
   <div class="page">
     <div class="header">
-      <h1>Events</h1>
-      <Button label="Neues Event" icon="pi pi-plus" @click="openEventDialog" />
+      <h1>{{ t('events.title') }}</h1>
+      <Button :label="t('events.newEvent')" icon="pi pi-plus" @click="openEventDialog" />
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('events.loading') }}</p>
 
     <DataTable v-else :value="events" dataKey="id" responsiveLayout="scroll">
-      <Column field="name" header="Name" />
-      <Column header="Typ">
+      <Column field="name" :header="t('events.columns.name')" />
+      <Column :header="t('events.columns.type')">
         <template #body="{ data }"><Tag :value="data.type" /></template>
       </Column>
-      <Column header="Beginn">
+      <Column :header="t('events.columns.start')">
         <template #body="{ data }">{{ fmtDateTime(data.starts_at) }}</template>
       </Column>
-      <Column field="capacity" header="Kapazität" />
-      <Column header="Preis">
+      <Column field="capacity" :header="t('events.columns.capacity')" />
+      <Column :header="t('events.columns.price')">
         <template #body="{ data }">{{ eur(data.price_cents) }}</template>
       </Column>
-      <Column header="Veröffentlicht">
+      <Column :header="t('events.columns.published')">
         <template #body="{ data }">
           <Tag
-            :value="data.is_published ? 'Ja' : 'Nein'"
+            :value="data.is_published ? t('events.status.yes') : t('events.status.no')"
             :severity="data.is_published ? 'success' : 'warning'"
           />
         </template>
       </Column>
-      <Column header="Aktionen">
+      <Column :header="t('events.columns.actions')">
         <template #body="{ data }">
-          <Button label="Anmeldungen" size="small" text @click="openRegistrations(data)" />
+          <Button :label="t('events.actions.registrations')" size="small" text @click="openRegistrations(data)" />
         </template>
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showEventDialog" header="Neues Event" modal :style="{ width: '480px' }">
+    <Dialog v-model:visible="showEventDialog" :header="t('events.newEvent')" modal :style="{ width: '480px' }">
       <div class="form">
-        <label>Name</label>
+        <label>{{ t('events.form.name') }}</label>
         <InputText v-model="eventForm.name" />
-        <label>Typ</label>
+        <label>{{ t('events.form.type') }}</label>
         <Dropdown
           v-model="eventForm.type"
           :options="typeOptions"
           optionLabel="label"
           optionValue="value"
         />
-        <label>Beginn</label>
+        <label>{{ t('events.form.start') }}</label>
         <DatePicker v-model="eventForm.starts_at" showTime hourFormat="24" />
-        <label>Ende</label>
+        <label>{{ t('events.form.end') }}</label>
         <DatePicker v-model="eventForm.ends_at" showTime hourFormat="24" />
-        <label>Ort</label>
+        <label>{{ t('events.form.location') }}</label>
         <InputText v-model="eventForm.location" />
-        <label>Kapazität</label>
+        <label>{{ t('events.form.capacity') }}</label>
         <InputNumber v-model="eventForm.capacity" :min="0" />
-        <label>Preis (€)</label>
+        <label>{{ t('events.form.price') }}</label>
         <InputNumber v-model="eventForm.price_eur" :min="0" :maxFractionDigits="2" />
         <div class="check">
           <Checkbox v-model="eventForm.requires_deposit" :binary="true" inputId="dep" />
-          <label for="dep">Anzahlung erforderlich</label>
+          <label for="dep">{{ t('events.form.requiresDeposit') }}</label>
         </div>
-        <label>Anzahlung (€)</label>
+        <label>{{ t('events.form.deposit') }}</label>
         <InputNumber v-model="eventForm.deposit_eur" :min="0" :maxFractionDigits="2" />
       </div>
       <template #footer>
-        <Button label="Abbrechen" text @click="showEventDialog = false" />
+        <Button :label="t('events.actions.cancel')" text @click="showEventDialog = false" />
         <Button
-          label="Speichern"
+          :label="t('events.actions.save')"
           :loading="savingEvent"
           :disabled="!eventForm.starts_at || !eventForm.ends_at"
           @click="saveEvent"
@@ -262,7 +265,7 @@ onMounted(load)
 
     <Dialog
       v-model:visible="showRegDialog"
-      :header="`Anmeldungen: ${activeEvent?.name ?? ''}`"
+      :header="t('events.registrationsFor', { name: activeEvent?.name ?? '' })"
       modal
       :style="{ width: '640px' }"
     >
@@ -272,25 +275,25 @@ onMounted(load)
           :options="memberOptions"
           optionLabel="label"
           optionValue="value"
-          placeholder="Mitglied wählen"
+          :placeholder="t('events.selectMember')"
           filter
         />
-        <Button label="Anmelden" :disabled="!regMemberId" @click="doRegister" />
+        <Button :label="t('events.actions.register')" :disabled="!regMemberId" @click="doRegister" />
       </div>
 
       <DataTable :value="registrations" dataKey="id" responsiveLayout="scroll">
-        <Column field="member_id" header="Mitglied" />
-        <Column header="Status">
+        <Column field="member_id" :header="t('events.columns.member')" />
+        <Column :header="t('events.columns.status')">
           <template #body="{ data }"><Tag :value="data.status" /></template>
         </Column>
-        <Column header="Bezahlt">
+        <Column :header="t('events.columns.paid')">
           <template #body="{ data }">{{ eur(data.amount_paid_cents) }}</template>
         </Column>
-        <Column header="Aktionen">
+        <Column :header="t('events.columns.actions')">
           <template #body="{ data }">
-            <Button label="Bezahlen" size="small" text @click="doPay(data)" />
+            <Button :label="t('events.actions.pay')" size="small" text @click="doPay(data)" />
             <Button
-              label="Stornieren"
+              :label="t('events.actions.cancelRegistration')"
               size="small"
               text
               severity="danger"

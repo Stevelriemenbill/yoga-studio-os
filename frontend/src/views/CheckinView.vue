@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
@@ -16,6 +17,8 @@ import {
   rejectAttendance,
 } from '@/api/training'
 import type { Member, MemberPass, CheckIn, Attendance } from '@/types'
+
+const { t, locale } = useI18n()
 
 const members = ref<Member[]>([])
 const error = ref('')
@@ -40,7 +43,7 @@ async function loadPending() {
   try {
     pending.value = await listPendingAttendance()
   } catch {
-    error.value = 'Ausstehende Check-ins konnten nicht geladen werden.'
+    error.value = t('checkin.errors.loadPending')
   }
 }
 
@@ -51,7 +54,7 @@ async function confirm(a: Attendance) {
     await confirmAttendance(a.session_id, a.member_id)
     await loadPending()
   } catch {
-    error.value = 'Bestätigung fehlgeschlagen.'
+    error.value = t('checkin.errors.confirm')
   } finally {
     pendingBusy.value = null
   }
@@ -64,7 +67,7 @@ async function reject(a: Attendance) {
     await rejectAttendance(a.session_id, a.member_id)
     await loadPending()
   } catch {
-    error.value = 'Ablehnung fehlgeschlagen.'
+    error.value = t('checkin.errors.reject')
   } finally {
     pendingBusy.value = null
   }
@@ -85,14 +88,14 @@ const qrSessionId = ref('')
 const qrResult = ref<CheckIn | null>(null)
 
 function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('de-DE')
+  return new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US')
 }
 
 async function loadMembers() {
   try {
     members.value = await listMembers()
   } catch {
-    error.value = 'Mitglieder konnten nicht geladen werden.'
+    error.value = t('checkin.errors.loadMembers')
   }
 }
 
@@ -105,7 +108,7 @@ async function doManual() {
       session_id: manualSessionId.value || undefined,
     })
   } catch {
-    error.value = 'Manueller Check-in fehlgeschlagen.'
+    error.value = t('checkin.errors.manual')
   }
 }
 
@@ -115,7 +118,7 @@ async function loadPass() {
   try {
     pass.value = await getMemberPass(passMemberId.value)
   } catch {
-    error.value = 'Pass konnte nicht geladen werden.'
+    error.value = t('checkin.errors.loadPass')
   }
 }
 
@@ -128,7 +131,7 @@ async function doQr() {
       session_id: qrSessionId.value || undefined,
     })
   } catch {
-    error.value = 'QR-Check-in fehlgeschlagen.'
+    error.value = t('checkin.errors.qr')
   }
 }
 
@@ -140,18 +143,18 @@ onMounted(() => {
 
 <template>
   <div class="page">
-    <h1>Check-in</h1>
+    <h1>{{ t('checkin.title') }}</h1>
 
     <p v-if="error" class="error">{{ error }}</p>
 
     <Card class="block">
       <template #title>
-        Ausstehende Bestätigungen
+        {{ t('checkin.pendingTitle') }}
         <span v-if="pending.length" class="badge">{{ pending.length }}</span>
       </template>
       <template #content>
         <p v-if="!pending.length" class="muted">
-          Keine Selbst-Check-ins warten auf Bestätigung.
+          {{ t('checkin.noPending') }}
         </p>
         <ul v-else class="pending-list">
           <li v-for="a in pending" :key="a.id" class="pending-item">
@@ -161,7 +164,7 @@ onMounted(() => {
             </span>
             <span class="pending-actions">
               <Button
-                label="Bestätigen"
+                :label="t('checkin.actions.confirm')"
                 icon="pi pi-check"
                 size="small"
                 severity="success"
@@ -169,7 +172,7 @@ onMounted(() => {
                 @click="confirm(a)"
               />
               <Button
-                label="Ablehnen"
+                :label="t('checkin.actions.reject')"
                 icon="pi pi-times"
                 size="small"
                 severity="danger"
@@ -184,61 +187,61 @@ onMounted(() => {
     </Card>
 
     <Card class="block">
-      <template #title>Manueller Check-in</template>
+      <template #title>{{ t('checkin.manualTitle') }}</template>
       <template #content>
         <div class="form">
-          <label>Mitglied</label>
+          <label>{{ t('checkin.member') }}</label>
           <Dropdown
             v-model="manualMemberId"
             :options="memberOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Mitglied wählen"
+            :placeholder="t('checkin.selectMember')"
             filter
           />
-          <label>Session-ID (optional)</label>
+          <label>{{ t('checkin.sessionIdOptional') }}</label>
           <InputText v-model="manualSessionId" />
-          <Button label="Check-in" :disabled="!manualMemberId" @click="doManual" />
+          <Button :label="t('checkin.checkIn')" :disabled="!manualMemberId" @click="doManual" />
           <p v-if="manualResult" class="success">
-            Eingecheckt um {{ fmtDateTime(manualResult.checked_in_at) }}
+            {{ t('checkin.checkedInAt', { time: fmtDateTime(manualResult.checked_in_at) }) }}
           </p>
         </div>
       </template>
     </Card>
 
     <Card class="block">
-      <template #title>QR-Pass</template>
+      <template #title>{{ t('checkin.qrPassTitle') }}</template>
       <template #content>
         <div class="form">
-          <label>Mitglied</label>
+          <label>{{ t('checkin.member') }}</label>
           <Dropdown
             v-model="passMemberId"
             :options="memberOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Mitglied wählen"
+            :placeholder="t('checkin.selectMember')"
             filter
           />
-          <Button label="Pass anzeigen" :disabled="!passMemberId" @click="loadPass" />
+          <Button :label="t('checkin.showPass')" :disabled="!passMemberId" @click="loadPass" />
           <template v-if="pass">
-            <p><strong>Token:</strong> {{ pass.token }}</p>
-            <p><strong>QR-Payload:</strong> {{ pass.qr_payload }}</p>
+            <p><strong>{{ t('checkin.token') }}:</strong> {{ pass.token }}</p>
+            <p><strong>{{ t('checkin.qrPayload') }}:</strong> {{ pass.qr_payload }}</p>
           </template>
         </div>
       </template>
     </Card>
 
     <Card class="block">
-      <template #title>QR Check-in</template>
+      <template #title>{{ t('checkin.qrCheckinTitle') }}</template>
       <template #content>
         <div class="form">
-          <label>QR-Payload</label>
+          <label>{{ t('checkin.qrPayload') }}</label>
           <Textarea v-model="qrPayload" rows="3" autoResize />
-          <label>Session-ID (optional)</label>
+          <label>{{ t('checkin.sessionIdOptional') }}</label>
           <InputText v-model="qrSessionId" />
-          <Button label="Check-in" :disabled="!qrPayload" @click="doQr" />
+          <Button :label="t('checkin.checkIn')" :disabled="!qrPayload" @click="doQr" />
           <p v-if="qrResult" class="success">
-            Eingecheckt um {{ fmtDateTime(qrResult.checked_in_at) }}
+            {{ t('checkin.checkedInAt', { time: fmtDateTime(qrResult.checked_in_at) }) }}
           </p>
         </div>
       </template>

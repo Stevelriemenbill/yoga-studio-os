@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Button from 'primevue/button'
@@ -16,6 +17,8 @@ import {
 } from '@/api/care'
 import type { StudentInNeed, StudentJourney, StudentNote } from '@/types'
 
+const { t, locale } = useI18n()
+
 const students = ref<StudentInNeed[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -28,7 +31,7 @@ const savingNote = ref(false)
 const loadingDetail = ref(false)
 
 function fmtDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString('de-DE') : '—'
+  return iso ? new Date(iso).toLocaleDateString(locale.value === 'de' ? 'de-DE' : 'en-US') : '—'
 }
 
 async function load() {
@@ -37,7 +40,7 @@ async function load() {
   try {
     students.value = await getStudentsNeedingCare()
   } catch {
-    error.value = 'Konnte nicht geladen werden.'
+    error.value = t('care.loadError')
   } finally {
     loading.value = false
   }
@@ -53,7 +56,7 @@ async function open(memberId: string) {
     journey.value = await getStudentJourney(memberId)
     notes.value = await listNotes(memberId)
   } catch {
-    error.value = 'Details konnten nicht geladen werden.'
+    error.value = t('care.detailError')
   } finally {
     loadingDetail.value = false
   }
@@ -67,7 +70,7 @@ async function saveNote() {
     notes.value.unshift(note)
     newNote.value = ''
   } catch {
-    error.value = 'Notiz konnte nicht gespeichert werden.'
+    error.value = t('care.noteSaveError')
   } finally {
     savingNote.value = false
   }
@@ -78,7 +81,7 @@ async function removeNote(noteId: string) {
     await deleteNote(noteId)
     notes.value = notes.value.filter((n) => n.id !== noteId)
   } catch {
-    error.value = 'Notiz konnte nicht gelöscht werden.'
+    error.value = t('care.noteDeleteError')
   }
 }
 
@@ -87,32 +90,31 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h1>Fürsorge</h1>
+    <h1>{{ t('care.title') }}</h1>
     <p class="lead">
-      Menschen, die zuvor regelmäßig kamen und zuletzt fehlten. Kein Marketing –
-      eine sanfte Einladung, dich persönlich zu melden und zu fragen, wie es geht.
+      {{ t('care.lead') }}
     </p>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <p v-if="loading">Wird geladen…</p>
+    <p v-if="loading">{{ t('care.loading') }}</p>
     <p v-else-if="students.length === 0" class="muted">
-      Zurzeit fehlt niemand aus dem gewohnten Rhythmus.
+      {{ t('care.noStudents') }}
     </p>
 
     <DataTable v-else :value="students" dataKey="member_id" responsiveLayout="scroll">
-      <Column field="name" header="Name" />
-      <Column header="Zuletzt da">
+      <Column field="name" :header="t('care.colName')" />
+      <Column :header="t('care.colLastVisit')">
         <template #body="{ data }">{{ fmtDate(data.last_visit) }}</template>
       </Column>
-      <Column header="Fehlt seit">
-        <template #body="{ data }">{{ data.days_since_last_visit }} Tagen</template>
+      <Column :header="t('care.colMissingSince')">
+        <template #body="{ data }">{{ t('care.daysCount', { count: data.days_since_last_visit }) }}</template>
       </Column>
-      <Column header="Sonst">
-        <template #body="{ data }">~{{ data.usual_visits_per_week }}×/Woche</template>
+      <Column :header="t('care.colUsual')">
+        <template #body="{ data }">{{ t('care.perWeek', { count: data.usual_visits_per_week }) }}</template>
       </Column>
       <Column>
         <template #body="{ data }">
-          <Button label="Ansehen" text @click="open(data.member_id)" />
+          <Button :label="t('care.view')" text @click="open(data.member_id)" />
         </template>
       </Column>
     </DataTable>
@@ -120,19 +122,19 @@ onMounted(load)
     <Dialog
       v-model:visible="dialogOpen"
       modal
-      :header="journey?.name ?? 'Praxis-Reise'"
+      :header="journey?.name ?? t('care.practiceJourney')"
       :style="{ width: '540px' }"
     >
-      <p v-if="loadingDetail">Wird geladen…</p>
+      <p v-if="loadingDetail">{{ t('care.loading') }}</p>
       <template v-else-if="journey">
         <div class="journey">
-          <div><span class="jl">Dabei seit</span><span>{{ fmtDate(journey.member_since) }}</span></div>
-          <div><span class="jl">Praxis-Einheiten</span><span>{{ journey.total_practices }}</span></div>
-          <div><span class="jl">Zuletzt da</span><span>{{ fmtDate(journey.last_visit) }}</span></div>
-          <div><span class="jl">Wochen (letzte 8)</span><span>{{ journey.weeks_practiced_recent }}</span></div>
+          <div><span class="jl">{{ t('care.memberSince') }}</span><span>{{ fmtDate(journey.member_since) }}</span></div>
+          <div><span class="jl">{{ t('care.practiceUnits') }}</span><span>{{ journey.total_practices }}</span></div>
+          <div><span class="jl">{{ t('care.lastHere') }}</span><span>{{ fmtDate(journey.last_visit) }}</span></div>
+          <div><span class="jl">{{ t('care.weeksRecent') }}</span><span>{{ journey.weeks_practiced_recent }}</span></div>
           <div v-if="journey.next_milestone">
-            <span class="jl">Nächster Meilenstein</span>
-            <span>{{ journey.next_milestone }} (noch {{ journey.practices_to_next_milestone }})</span>
+            <span class="jl">{{ t('care.nextMilestone') }}</span>
+            <span>{{ t('care.milestoneRemaining', { milestone: journey.next_milestone, count: journey.practices_to_next_milestone }) }}</span>
           </div>
         </div>
 
@@ -144,12 +146,12 @@ onMounted(load)
           />
         </div>
 
-        <h3>Notizen zur Begleitung</h3>
+        <h3>{{ t('care.notesHeading') }}</h3>
         <div class="note-add">
-          <Textarea v-model="newNote" rows="2" autoResize placeholder="Verletzung, Ziel, Vorliebe…" />
-          <Button label="Speichern" :loading="savingNote" @click="saveNote" />
+          <Textarea v-model="newNote" rows="2" autoResize :placeholder="t('care.notePlaceholder')" />
+          <Button :label="t('care.save')" :loading="savingNote" @click="saveNote" />
         </div>
-        <p v-if="notes.length === 0" class="muted">Noch keine Notizen.</p>
+        <p v-if="notes.length === 0" class="muted">{{ t('care.noNotes') }}</p>
         <ul class="notes">
           <li v-for="n in notes" :key="n.id">
             <span>{{ n.body }}</span>
