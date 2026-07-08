@@ -43,6 +43,12 @@ class AttendanceSet(BaseModel):
     status: AttendanceStatus
 
 
+class AttendanceConfirm(BaseModel):
+    """Staff confirms or rejects a pending self check-in."""
+
+    member_id: uuid.UUID
+
+
 class AttendanceRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  Attendance,
   AttendanceStatus,
   CheckIn,
   MemberPass,
@@ -36,6 +37,33 @@ export async function setAttendance(
   payload: { member_id: string; status: AttendanceStatus },
 ): Promise<unknown> {
   const { data } = await api.put(`/attendance/session/${sessionId}`, payload)
+  return data
+}
+
+export async function listPendingAttendance(): Promise<Attendance[]> {
+  const { data } = await api.get<Attendance[]>('/attendance/pending')
+  return data
+}
+
+export async function confirmAttendance(
+  sessionId: string,
+  memberId: string,
+): Promise<Attendance> {
+  const { data } = await api.post<Attendance>(
+    `/attendance/session/${sessionId}/confirm`,
+    { member_id: memberId },
+  )
+  return data
+}
+
+export async function rejectAttendance(
+  sessionId: string,
+  memberId: string,
+): Promise<Attendance> {
+  const { data } = await api.post<Attendance>(
+    `/attendance/session/${sessionId}/reject`,
+    { member_id: memberId },
+  )
   return data
 }
 

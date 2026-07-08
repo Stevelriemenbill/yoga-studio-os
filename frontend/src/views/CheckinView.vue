@@ -7,8 +7,15 @@ import Textarea from 'primevue/textarea'
 import Card from 'primevue/card'
 
 import { listMembers } from '@/api/members'
-import { checkInManual, checkInQr, getMemberPass } from '@/api/training'
-import type { Member, MemberPass, CheckIn } from '@/types'
+import {
+  checkInManual,
+  checkInQr,
+  getMemberPass,
+  listPendingAttendance,
+  confirmAttendance,
+  rejectAttendance,
+} from '@/api/training'
+import type { Member, MemberPass, CheckIn, Attendance } from '@/types'
 
 const members = ref<Member[]>([])
 const error = ref('')
@@ -19,6 +26,49 @@ const memberOptions = computed(() =>
     value: m.id,
   })),
 )
+
+const memberName = (id: string): string => {
+  const m = members.value.find((x) => x.id === id)
+  return m ? `${m.first_name} ${m.last_name}` : id
+}
+
+// Pending self check-ins awaiting staff confirmation.
+const pending = ref<Attendance[]>([])
+const pendingBusy = ref<string | null>(null)
+
+async function loadPending() {
+  try {
+    pending.value = await listPendingAttendance()
+  } catch {
+    error.value = 'Ausstehende Check-ins konnten nicht geladen werden.'
+  }
+}
+
+async function confirm(a: Attendance) {
+  pendingBusy.value = a.id
+  error.value = ''
+  try {
+    await confirmAttendance(a.session_id, a.member_id)
+    await loadPending()
+  } catch {
+    error.value = 'Bestätigung fehlgeschlagen.'
+  } finally {
+    pendingBusy.value = null
+  }
+}
+
+async function reject(a: Attendance) {
+  pendingBusy.value = a.id
+  error.value = ''
+  try {
+    await rejectAttendance(a.session_id, a.member_id)
+    await loadPending()
+  } catch {
+    error.value = 'Ablehnung fehlgeschlagen.'
+  } finally {
+    pendingBusy.value = null
+  }
+}
 
 // Manual check-in
 const manualMemberId = ref('')
@@ -82,7 +132,10 @@ async function doQr() {
   }
 }
 
-onMounted(loadMembers)
+onMounted(() => {
+  loadMembers()
+  loadPending()
+})
 </script>
 
 <template>
@@ -90,6 +143,45 @@ onMounted(loadMembers)
     <h1>Check-in</h1>
 
     <p v-if="error" class="error">{{ error }}</p>
+
+    <Card class="block">
+      <template #title>
+        Ausstehende Bestätigungen
+        <span v-if="pending.length" class="badge">{{ pending.length }}</span>
+      </template>
+      <template #content>
+        <p v-if="!pending.length" class="muted">
+          Keine Selbst-Check-ins warten auf Bestätigung.
+        </p>
+        <ul v-else class="pending-list">
+          <li v-for="a in pending" :key="a.id" class="pending-item">
+            <span class="pending-name">
+              <i class="pi pi-user" />
+              {{ memberName(a.member_id) }}
+            </span>
+            <span class="pending-actions">
+              <Button
+                label="Bestätigen"
+                icon="pi pi-check"
+                size="small"
+                severity="success"
+                :loading="pendingBusy === a.id"
+                @click="confirm(a)"
+              />
+              <Button
+                label="Ablehnen"
+                icon="pi pi-times"
+                size="small"
+                severity="danger"
+                outlined
+                :loading="pendingBusy === a.id"
+                @click="reject(a)"
+              />
+            </span>
+          </li>
+        </ul>
+      </template>
+    </Card>
 
     <Card class="block">
       <template #title>Manueller Check-in</template>
@@ -176,5 +268,51 @@ onMounted(loadMembers)
 }
 .form label {
   font-weight: 600;
+}
+.muted {
+  color: #64748b;
+  margin: 0;
+}
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  margin-left: 0.5rem;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.pending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.pending-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.85rem;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+.pending-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.pending-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>

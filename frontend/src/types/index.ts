@@ -132,7 +132,20 @@ export interface WaitlistEntry {
 
 // --- Check-in / Attendance ---
 export type CheckInMethod = 'qr' | 'manual'
-export type AttendanceStatus = 'present' | 'absent' | 'excused'
+export type AttendanceStatus =
+  | 'pending'
+  | 'present'
+  | 'absent'
+  | 'excused'
+  | 'late'
+
+export interface Attendance {
+  id: string
+  session_id: string
+  member_id: string
+  status: AttendanceStatus
+  recorded_by: string | null
+}
 
 export interface CheckIn {
   id: string

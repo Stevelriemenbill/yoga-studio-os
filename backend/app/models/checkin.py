@@ -46,6 +46,7 @@ class CheckIn(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
 
 
 class AttendanceStatus(str, enum.Enum):
+    PENDING = "pending"  # Selbst-Check-in, wartet auf Bestätigung
     PRESENT = "present"  # Anwesend
     ABSENT = "absent"  # Nicht erschienen
     EXCUSED = "excused"  # Entschuldigt

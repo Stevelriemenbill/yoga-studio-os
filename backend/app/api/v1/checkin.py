@@ -9,7 +9,9 @@ from app.db.session import get_db
 from app.models.checkin import CheckInMethod
 from app.models.member import Member
 from app.models.session import CourseSession
+from app.models.user import STAFF_ROLES
 from app.schemas.checkin import (
+    AttendanceConfirm,
     AttendanceRead,
     AttendanceSet,
     CheckInRead,
@@ -80,6 +82,8 @@ async def qr_check_in(
         raise HTTPException(status_code=400, detail="Invalid QR token")
     session = await _get_session(db, current.tenant_id, data.session_id)
     member = await _get_member(db, current.tenant_id, member_id)
+    # Self check-in by a member/trainee needs staff confirmation to count.
+    requires_confirmation = current.role not in STAFF_ROLES
     try:
         return await checkin_service.check_in(
             db,
@@ -88,6 +92,7 @@ async def qr_check_in(
             member,
             method=CheckInMethod.QR,
             device_id=data.device_id,
+            requires_confirmation=requires_confirmation,
         )
     except CheckInError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -121,6 +126,53 @@ async def list_attendance(
     db: AsyncSession = Depends(get_db),
 ):
     return await AttendanceRepository(db, current.tenant_id).for_session(session_id)
+
+
+@attendance_router.get("/pending", response_model=list[AttendanceRead])
+async def list_pending(
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    """All self check-ins awaiting staff confirmation across sessions."""
+    return await AttendanceRepository(db, current.tenant_id).pending()
+
+
+@attendance_router.post(
+    "/session/{session_id}/confirm", response_model=AttendanceRead
+)
+async def confirm_attendance(
+    session_id: uuid.UUID,
+    data: AttendanceConfirm,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    session = await _get_session(db, current.tenant_id, session_id)
+    await _get_member(db, current.tenant_id, data.member_id)
+    try:
+        return await checkin_service.confirm_attendance(
+            db, current.tenant_id, session, data.member_id, current.user.id
+        )
+    except CheckInError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@attendance_router.post(
+    "/session/{session_id}/reject", response_model=AttendanceRead
+)
+async def reject_attendance(
+    session_id: uuid.UUID,
+    data: AttendanceConfirm,
+    current: CurrentUser = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+):
+    await _get_session(db, current.tenant_id, session_id)
+    await _get_member(db, current.tenant_id, data.member_id)
+    try:
+        return await checkin_service.reject_attendance(
+            db, current.tenant_id, session_id, data.member_id, current.user.id
+        )
+    except CheckInError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @attendance_router.put("/session/{session_id}", response_model=AttendanceRead)
