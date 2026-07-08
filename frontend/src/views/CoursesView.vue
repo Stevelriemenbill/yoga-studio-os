@@ -24,7 +24,8 @@ import {
   uploadCourseAttachment,
   deleteCourseAttachment,
 } from '@/api/courses'
-import type { Course, CourseAttachment, Room, CourseLevel } from '@/types'
+import type { Course, CourseAttachment, Room, CourseLevel, TrainingCohort } from '@/types'
+import { listCohorts } from '@/api/training'
 
 const { t } = useI18n()
 
@@ -95,6 +96,8 @@ const series = ref<{
   endMode: 'date' | 'count'
   endDate: Date | null
   count: number
+  intervalWeeks: number
+  cohortId: string | null
 }>({
   weekdays: [],
   time: null,
@@ -102,8 +105,11 @@ const series = ref<{
   endMode: 'date',
   endDate: null,
   count: 8,
+  intervalWeeks: 1,
+  cohortId: null,
 })
 const seriesResult = ref<number | null>(null)
+const cohorts = ref<TrainingCohort[]>([])
 
 const seriesValid = computed(() => {
   const s = series.value
@@ -125,6 +131,11 @@ async function load() {
   try {
     courses.value = await listCourses()
     rooms.value = await listRooms()
+    try {
+      cohorts.value = await listCohorts()
+    } catch {
+      cohorts.value = []
+    }
   } catch {
     error.value = t('courses.errors.loadCourses')
   } finally {
@@ -299,6 +310,8 @@ function openSeriesDialog(course: Course) {
     endMode: 'date',
     endDate: null,
     count: 8,
+    intervalWeeks: 1,
+    cohortId: null,
   }
   showSeriesDialog.value = true
 }
@@ -331,6 +344,8 @@ async function saveSeries() {
       ...(s.endMode === 'date'
         ? { end_date: toDateStr(s.endDate as Date) }
         : { count: s.count }),
+      ...(s.intervalWeeks > 1 ? { interval_weeks: s.intervalWeeks } : {}),
+      ...(s.cohortId ? { cohort_id: s.cohortId } : {}),
     })
     seriesResult.value = created.length
     await load()
@@ -584,6 +599,26 @@ onMounted(load)
           :min="1"
           :max="200"
           showButtons
+        />
+
+        <label>{{ t('courses.series.intervalWeeks') }}</label>
+        <InputNumber
+          v-model="series.intervalWeeks"
+          :min="1"
+          :max="26"
+          showButtons
+          :suffix="' ' + t('courses.series.weeksSuffix')"
+        />
+        <small class="hint">{{ t('courses.series.intervalHint') }}</small>
+
+        <label>{{ t('courses.series.cohort') }}</label>
+        <Dropdown
+          v-model="series.cohortId"
+          :options="cohorts"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="t('courses.series.noCohort')"
+          showClear
         />
 
         <p v-if="seriesResult !== null" class="series-result">

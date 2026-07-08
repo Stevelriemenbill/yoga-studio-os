@@ -132,6 +132,10 @@ export interface RecurrencePayload {
   /** Provide exactly one of end_date or count. */
   end_date?: string
   count?: number
+  /** Repeat every N weeks (1 = weekly, 6 = every six weeks). */
+  interval_weeks?: number
+  /** Optional training cohort every generated session belongs to. */
+  cohort_id?: string | null
 }
 
 /** Generate many sessions for a course from a weekly recurrence. */

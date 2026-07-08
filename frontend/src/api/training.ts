@@ -3,9 +3,15 @@ import type {
   Attendance,
   AttendanceStatus,
   CheckIn,
+  CohortProgress,
+  CohortStatus,
+  EnrollmentStatus,
   MemberPass,
+  TrainingCohort,
   TrainingDashboard,
+  TrainingEnrollment,
   TrainingHours,
+  TrainingProgram,
 } from '@/types'
 
 // --- Check-in ---
@@ -117,4 +123,117 @@ export async function logTrainingHours(payload: {
 export function trainingCsvUrl(traineeId: string): string {
   const base = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
   return `${base}/training/export/${traineeId}.csv`
+}
+
+// --- Programs ---
+export async function listPrograms(): Promise<TrainingProgram[]> {
+  const { data } = await api.get<TrainingProgram[]>('/training/programs')
+  return data
+}
+
+export async function createProgram(payload: {
+  name: string
+  description?: string | null
+  duration_months?: number
+}): Promise<TrainingProgram> {
+  const { data } = await api.post<TrainingProgram>('/training/programs', payload)
+  return data
+}
+
+export async function updateProgram(
+  programId: string,
+  payload: Partial<{
+    name: string
+    description: string | null
+    duration_months: number
+    is_active: boolean
+  }>,
+): Promise<TrainingProgram> {
+  const { data } = await api.patch<TrainingProgram>(
+    `/training/programs/${programId}`,
+    payload,
+  )
+  return data
+}
+
+// --- Cohorts ---
+export async function listCohorts(
+  programId?: string,
+): Promise<TrainingCohort[]> {
+  const { data } = await api.get<TrainingCohort[]>('/training/cohorts', {
+    params: programId ? { program_id: programId } : undefined,
+  })
+  return data
+}
+
+export async function createCohort(payload: {
+  program_id: string
+  name: string
+  start_date: string
+  end_date?: string | null
+  status?: CohortStatus
+}): Promise<TrainingCohort> {
+  const { data } = await api.post<TrainingCohort>('/training/cohorts', payload)
+  return data
+}
+
+export async function updateCohort(
+  cohortId: string,
+  payload: Partial<{
+    name: string
+    start_date: string
+    end_date: string | null
+    status: CohortStatus
+  }>,
+): Promise<TrainingCohort> {
+  const { data } = await api.patch<TrainingCohort>(
+    `/training/cohorts/${cohortId}`,
+    payload,
+  )
+  return data
+}
+
+export async function getCohortProgress(
+  cohortId: string,
+): Promise<CohortProgress> {
+  const { data } = await api.get<CohortProgress>(
+    `/training/cohorts/${cohortId}/progress`,
+  )
+  return data
+}
+
+// --- Enrollments ---
+export async function listEnrollments(
+  cohortId: string,
+): Promise<TrainingEnrollment[]> {
+  const { data } = await api.get<TrainingEnrollment[]>(
+    `/training/cohorts/${cohortId}/enrollments`,
+  )
+  return data
+}
+
+export async function enrollMember(
+  cohortId: string,
+  payload: { member_id: string; enrolled_on?: string; status?: EnrollmentStatus },
+): Promise<TrainingEnrollment> {
+  const { data } = await api.post<TrainingEnrollment>(
+    `/training/cohorts/${cohortId}/enrollments`,
+    payload,
+  )
+  return data
+}
+
+export async function updateEnrollment(
+  enrollmentId: string,
+  status: EnrollmentStatus,
+): Promise<TrainingEnrollment> {
+  const { data } = await api.patch<TrainingEnrollment>(
+    `/training/enrollments/${enrollmentId}`,
+    { status },
+  )
+  return data
+}
+
+export async function removeEnrollment(enrollmentId: string): Promise<void> {
+  await api.delete(`/training/enrollments/${enrollmentId}`)
 }

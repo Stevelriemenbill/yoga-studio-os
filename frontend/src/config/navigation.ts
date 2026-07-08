@@ -51,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { labelKey: 'nav.joinRequests', icon: 'pi pi-user-plus', to: '/join-requests', roles: FRONT_DESK, hintKey: 'nav.hints.joinRequests' },
       { labelKey: 'nav.team', icon: 'pi pi-id-card', to: '/users', roles: ADMIN, hintKey: 'nav.hints.team' },
       { labelKey: 'nav.training', icon: 'pi pi-graduation-cap', to: '/training', roles: STAFF, hintKey: 'nav.hints.training' },
+      { labelKey: 'nav.cohorts', icon: 'pi pi-sitemap', to: '/cohorts', roles: STAFF, hintKey: 'nav.hints.cohorts' },
     ],
   },
   {

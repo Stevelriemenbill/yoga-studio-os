@@ -250,6 +250,51 @@ export interface TrainingDashboard {
   breakdown: AreaProgress[]
 }
 
+export type CohortStatus = 'planned' | 'running' | 'completed'
+export type EnrollmentStatus = 'active' | 'paused' | 'completed' | 'withdrawn'
+
+export interface TrainingProgram {
+  id: string
+  name: string
+  description: string | null
+  duration_months: number
+  is_active: boolean
+}
+
+export interface TrainingCohort {
+  id: string
+  program_id: string
+  name: string
+  start_date: string
+  end_date: string | null
+  status: CohortStatus
+  enrolled_count: number
+}
+
+export interface TrainingEnrollment {
+  id: string
+  cohort_id: string
+  member_id: string
+  enrolled_on: string
+  status: EnrollmentStatus
+  member_name: string | null
+}
+
+export interface TraineeProgress {
+  member_id: string
+  member_name: string | null
+  status: EnrollmentStatus
+  attended_sessions: number
+  training_hours: number
+}
+
+export interface CohortProgress {
+  cohort_id: string
+  cohort_name: string
+  required_hours: number
+  trainees: TraineeProgress[]
+}
+
 // --- Notifications ---
 export type NotificationChannel = 'email' | 'push' | 'whatsapp'
 export type NotificationStatus = 'pending' | 'sent' | 'failed'
