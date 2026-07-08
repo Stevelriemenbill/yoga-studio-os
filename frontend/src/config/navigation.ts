@@ -24,7 +24,7 @@ const FRONT_DESK: UserRole[] = ['studio_admin', 'studio_manager', 'reception']
  * - Studio: at-a-glance overview
  * - Betrieb: the daily front-desk / teaching workflow
  * - Community: people & their journeys
- * - Wachstum: insight & growth tooling (managers)
+ * - Begleitung: caring for students & strengthening the teacher-student bond
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
@@ -50,11 +50,12 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Wachstum',
+    label: 'Begleitung',
     items: [
-      { label: 'Analytics', icon: 'pi pi-chart-bar', to: '/analytics', roles: MANAGERS, hint: 'KPIs & Trends' },
+      { label: 'Fürsorge', icon: 'pi pi-heart', to: '/care', roles: STAFF, hint: 'Wer braucht gerade Aufmerksamkeit' },
+      { label: 'Begleiter:in', icon: 'pi pi-sparkles', to: '/assistant', roles: STAFF, hint: 'Fragen zur Begleitung deiner Schüler:innen' },
+      { label: 'Gemeinschaft', icon: 'pi pi-chart-line', to: '/analytics', roles: MANAGERS, hint: 'Sanfter Puls der Gemeinschaft' },
       { label: 'Automatisierung', icon: 'pi pi-bolt', to: '/automations', roles: MANAGERS, hint: 'Regeln & Trigger' },
-      { label: 'KI-Assistent', icon: 'pi pi-sparkles', to: '/assistant', roles: MANAGERS, hint: 'Fragen & Prognosen' },
       { label: 'Benachrichtigungen', icon: 'pi pi-bell', to: '/notifications', roles: STAFF, hint: 'Nachrichten & Verlauf' },
     ],
   },

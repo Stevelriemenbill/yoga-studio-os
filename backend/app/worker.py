@@ -4,7 +4,7 @@ Runs scheduled/deferred jobs against Redis:
 
 * ``process_notifications`` – deliver due pending notifications (all tenants).
 * ``run_automations`` – evaluate retention automation rules (all tenants).
-* ``generate_insights`` – refresh AI insights (all tenants).
+* ``generate_insights`` – refresh care insights (all tenants).
 
 Run with::
 
@@ -60,7 +60,7 @@ async def generate_insights(ctx: dict) -> dict:
     count = 0
     async with AsyncSessionLocal() as db:
         for tenant_id in await _all_tenant_ids(db):
-            insights = await ai_service.generate_insights(db, tenant_id)
+            insights = await ai_service.care_insights(db, tenant_id)
             count += len(insights)
             if insights:
                 await publish(

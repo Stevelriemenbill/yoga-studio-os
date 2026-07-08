@@ -1,27 +1,12 @@
 import { api } from './client'
-import type {
-  HeatmapCell,
-  PopularCourse,
-  StudioKpis,
-  TeacherAnalytics,
-} from '@/types'
+import type { CommunityPulse, TeacherReach } from '@/types'
 
-export async function getKpis(): Promise<StudioKpis> {
-  const { data } = await api.get<StudioKpis>('/analytics/kpis')
+export async function getCommunityPulse(): Promise<CommunityPulse> {
+  const { data } = await api.get<CommunityPulse>('/analytics/pulse')
   return data
 }
 
-export async function getHeatmap(): Promise<HeatmapCell[]> {
-  const { data } = await api.get<HeatmapCell[]>('/analytics/heatmap')
-  return data
-}
-
-export async function getTeacherAnalytics(): Promise<TeacherAnalytics[]> {
-  const { data } = await api.get<TeacherAnalytics[]>('/analytics/teachers')
-  return data
-}
-
-export async function getPopularCourses(): Promise<PopularCourse[]> {
-  const { data } = await api.get<PopularCourse[]>('/analytics/popular-courses')
+export async function getTeacherReach(): Promise<TeacherReach[]> {
+  const { data } = await api.get<TeacherReach[]>('/analytics/teachers')
   return data
 }

@@ -1,28 +1,33 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
 
-import { listInsights, generateInsights, getForecast, askAssistant } from '@/api/ai'
-import type { AIInsight, FillForecast } from '@/types'
+import { listInsights, generateInsights, askAssistant } from '@/api/care'
+import type { AIInsight } from '@/types'
 
 const insights = ref<AIInsight[]>([])
 const answers = ref<AIInsight[]>([])
-const forecasts = ref<FillForecast[]>([])
 const question = ref('')
 const asking = ref(false)
 const generating = ref(false)
-const loadingForecast = ref(false)
 const loading = ref(false)
 const error = ref('')
 
-function pct(x: number): string {
-  return (x * 100).toFixed(0) + '%'
+const suggestions = [
+  'Um wen sollten wir uns gerade kümmern?',
+  'Wer feiert bald einen Meilenstein?',
+  'Wer ist neu dazugekommen?',
+]
+
+const typeLabel: Record<string, string> = {
+  care: 'Fürsorge',
+  milestone: 'Meilenstein',
+  assistant_answer: 'Antwort',
 }
+
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString('de-DE')
 }
@@ -33,22 +38,23 @@ async function load() {
   try {
     insights.value = await listInsights()
   } catch {
-    error.value = 'Insights konnten nicht geladen werden.'
+    error.value = 'Hinweise konnten nicht geladen werden.'
   } finally {
     loading.value = false
   }
 }
 
-async function ask() {
-  if (!question.value.trim()) return
+async function ask(preset?: string) {
+  const q = (preset ?? question.value).trim()
+  if (!q) return
   asking.value = true
   error.value = ''
   try {
-    const insight = await askAssistant(question.value)
+    const insight = await askAssistant(q)
     answers.value.unshift(insight)
     question.value = ''
   } catch {
-    error.value = 'Frage konnte nicht beantwortet werden.'
+    error.value = 'Die Frage konnte nicht beantwortet werden.'
   } finally {
     asking.value = false
   }
@@ -60,21 +66,9 @@ async function refresh() {
   try {
     insights.value = await generateInsights()
   } catch {
-    error.value = 'Insights konnten nicht aktualisiert werden.'
+    error.value = 'Hinweise konnten nicht aktualisiert werden.'
   } finally {
     generating.value = false
-  }
-}
-
-async function loadForecast() {
-  loadingForecast.value = true
-  error.value = ''
-  try {
-    forecasts.value = await getForecast()
-  } catch {
-    error.value = 'Prognose konnte nicht geladen werden.'
-  } finally {
-    loadingForecast.value = false
   }
 }
 
@@ -83,16 +77,30 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <h1>KI-Assistent</h1>
+    <h1>Begleiter:in</h1>
+    <p class="lead">
+      Ein ruhiger Gefährte, der dir hilft, deine Schüler:innen zu begleiten –
+      wer gerade Aufmerksamkeit braucht, wer bald etwas zu feiern hat, wer neu ist.
+    </p>
 
     <p v-if="error" class="error">{{ error }}</p>
 
     <Card class="block">
-      <template #title>Frage stellen</template>
+      <template #title>Frag mich</template>
       <template #content>
         <div class="ask">
-          <Textarea v-model="question" rows="2" autoResize placeholder="Deine Frage…" />
-          <Button label="Fragen" :loading="asking" @click="ask" />
+          <Textarea v-model="question" rows="2" autoResize placeholder="Deine Frage zur Begleitung…" />
+          <Button label="Fragen" :loading="asking" @click="ask()" />
+        </div>
+        <div class="chips">
+          <Button
+            v-for="s in suggestions"
+            :key="s"
+            :label="s"
+            text
+            size="small"
+            @click="ask(s)"
+          />
         </div>
         <div class="cards">
           <Card v-for="a in answers" :key="a.id" class="insight">
@@ -104,16 +112,19 @@ onMounted(load)
     </Card>
 
     <div class="header">
-      <h2>Insights</h2>
-      <Button label="Insights aktualisieren" icon="pi pi-refresh" outlined :loading="generating" @click="refresh" />
+      <h2>Hinweise zur Begleitung</h2>
+      <Button label="Aktualisieren" icon="pi pi-refresh" outlined :loading="generating" @click="refresh" />
     </div>
     <p v-if="loading">Wird geladen…</p>
+    <p v-else-if="insights.length === 0" class="muted">
+      Zurzeit gibt es keine Hinweise – eure Gemeinschaft praktiziert beständig.
+    </p>
     <div v-else class="cards">
       <Card v-for="i in insights" :key="i.id" class="insight">
         <template #title>
           <div class="insight-head">
             <span>{{ i.title }}</span>
-            <Tag :value="i.type" />
+            <Tag :value="typeLabel[i.type] ?? i.type" />
           </div>
         </template>
         <template #content>
@@ -122,31 +133,6 @@ onMounted(load)
         </template>
       </Card>
     </div>
-
-    <div class="header">
-      <h2>Prognose</h2>
-      <Button label="Prognose laden" icon="pi pi-chart-line" outlined :loading="loadingForecast" @click="loadForecast" />
-    </div>
-    <DataTable :value="forecasts" dataKey="session_id" responsiveLayout="scroll">
-      <Column header="Beginn">
-        <template #body="{ data }">{{ fmtDateTime(data.starts_at) }}</template>
-      </Column>
-      <Column header="Prognose Auslastung">
-        <template #body="{ data }">{{ pct(data.predicted_fill_rate) }}</template>
-      </Column>
-      <Column header="Voll">
-        <template #body="{ data }">
-          <Tag v-if="data.likely_full" value="Wahrsch. voll" severity="success" />
-          <span v-else>—</span>
-        </template>
-      </Column>
-      <Column header="Unterbucht">
-        <template #body="{ data }">
-          <Tag v-if="data.likely_underbooked" value="Unterbucht" severity="warning" />
-          <span v-else>—</span>
-        </template>
-      </Column>
-    </DataTable>
   </div>
 </template>
 
@@ -154,6 +140,10 @@ onMounted(load)
 .page {
   max-width: 1100px;
   margin: 0 auto;
+}
+.lead {
+  color: #6b7280;
+  margin-bottom: 1.25rem;
 }
 .error {
   color: #dc2626;
@@ -173,6 +163,12 @@ onMounted(load)
 }
 .ask :deep(textarea) {
   flex: 1;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
 }
 .cards {
   display: grid;

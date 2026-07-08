@@ -207,42 +207,19 @@ export interface AppNotification {
   template: string | null
 }
 
-// --- Analytics ---
-export interface StudioKpis {
+// --- Analytics (sanfter Puls der Gemeinschaft) ---
+export interface CommunityPulse {
   sessions: number
-  total_capacity: number
-  bookings: number
-  utilization: number
-  no_show_rate: number
-  cancellations: number
-  check_ins: number
-  attended: number
-  waitlist_ratio: number
-  avg_class_size: number
+  people_practicing: number
+  total_practices: number
   new_members: number
 }
 
-export interface HeatmapCell {
-  weekday: number
-  hour: number
-  sessions: number
-  utilization: number
-  level: 'green' | 'yellow' | 'red'
-}
-
-export interface TeacherAnalytics {
+export interface TeacherReach {
   teacher_id: string
   sessions: number
-  utilization: number
-  booked: number
-  no_shows: number
-  waitlist: number
-  unique_members: number
-}
-
-export interface PopularCourse {
-  course_id: string
-  bookings: number
+  students_guided: number
+  returning_students: number
 }
 
 // --- Automations ---
@@ -268,8 +245,14 @@ export interface AutomationRunResult {
   per_rule: Record<string, number>
 }
 
-// --- AI ---
-export type InsightType = 'forecast' | 'recommendation' | 'anomaly' | 'assistant_answer'
+// --- Begleitung / Fürsorge ---
+export type InsightType =
+  | 'care'
+  | 'milestone'
+  | 'assistant_answer'
+  | 'forecast'
+  | 'recommendation'
+  | 'anomaly'
 
 export interface AIInsight {
   id: string
@@ -281,13 +264,41 @@ export interface AIInsight {
   created_at: string
 }
 
-export interface FillForecast {
-  session_id: string
-  course_id: string
-  starts_at: string
-  predicted_fill_rate: number
-  likely_full: boolean
-  likely_underbooked: boolean
+export interface StudentInNeed {
+  member_id: string
+  name: string
+  days_since_last_visit: number
+  last_visit: string
+  usual_visits_per_week: number
+  total_visits: number
+}
+
+export interface PracticedStyle {
+  course: string
+  visits: number
+}
+
+export interface StudentJourney {
+  member_id: string
+  name: string
+  member_since: string
+  days_as_member: number
+  total_practices: number
+  practiced_styles: PracticedStyle[]
+  weeks_practiced_recent: number
+  last_visit: string | null
+  days_since_last_visit: number | null
+  milestones_reached: number[]
+  next_milestone: number | null
+  practices_to_next_milestone: number | null
+}
+
+export interface StudentNote {
+  id: string
+  member_id: string
+  author_id: string | null
+  body: string
+  created_at: string
 }
 
 // --- Events ---

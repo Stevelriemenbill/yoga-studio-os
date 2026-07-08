@@ -12,10 +12,13 @@ JSONType = JSON().with_variant(JSONB(), "postgresql")
 
 
 class InsightType(str, enum.Enum):
+    CARE = "care"  # Fürsorge: Schüler, der Aufmerksamkeit gebrauchen könnte
+    MILESTONE = "milestone"  # Meilenstein / Jubiläum eines Schülers
+    ASSISTANT_ANSWER = "assistant_answer"
+    # Legacy (nicht mehr aktiv erzeugt, für Bestandsdaten beibehalten)
     FORECAST = "forecast"
     RECOMMENDATION = "recommendation"
     ANOMALY = "anomaly"
-    ASSISTANT_ANSWER = "assistant_answer"
 
 
 class AIInsight(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):

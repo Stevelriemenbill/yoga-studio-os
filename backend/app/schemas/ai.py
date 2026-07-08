@@ -20,3 +20,17 @@ class InsightRead(BaseModel):
 
 class AssistantQuery(BaseModel):
     question: str
+
+
+class StudentNoteCreate(BaseModel):
+    body: str
+
+
+class StudentNoteRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    member_id: uuid.UUID
+    author_id: uuid.UUID | None
+    body: str
+    created_at: datetime

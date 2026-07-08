@@ -44,25 +44,56 @@ async def test_inactivity_automation_enqueues(client):
 
 
 @pytest.mark.asyncio
-async def test_ai_assistant_answers(client):
+async def test_care_assistant_answers(client):
     headers = await _auth(client)
     resp = await client.post(
-        "/api/v1/ai/assistant",
-        json={"question": "Wie ist die Auslastung?"},
+        "/api/v1/care/assistant",
+        json={"question": "Um wen sollten wir uns kümmern?"},
         headers=headers,
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["type"] == "assistant_answer"
-    assert "Auslastung" in body["body"]
+    assert isinstance(body["body"], str) and body["body"]
 
 
 @pytest.mark.asyncio
-async def test_ai_forecast_empty(client):
+async def test_care_insights_and_students(client):
     headers = await _auth(client)
-    resp = await client.get("/api/v1/ai/forecast", headers=headers)
+    # Keine Praxis-Historie -> Liste ist leer, aber Endpunkt liefert 200.
+    resp = await client.get("/api/v1/care/students-needing-care", headers=headers)
     assert resp.status_code == 200
     assert resp.json() == []
+
+    gen = await client.post("/api/v1/care/insights/generate", headers=headers)
+    assert gen.status_code == 200
+    assert isinstance(gen.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_student_notes_crud(client):
+    headers = await _auth(client)
+    member = await _make_member(client, headers, "Nora")
+
+    created = await client.post(
+        f"/api/v1/care/notes/{member['id']}",
+        json={"body": "Möchte an der Schulteröffnung arbeiten."},
+        headers=headers,
+    )
+    assert created.status_code == 200, created.text
+    note = created.json()
+    assert "Schulter" in note["body"]
+
+    listing = await client.get(
+        f"/api/v1/care/notes/{member['id']}", headers=headers
+    )
+    assert listing.status_code == 200
+    assert len(listing.json()) == 1
+
+    deleted = await client.delete(
+        f"/api/v1/care/notes/{note['id']}", headers=headers
+    )
+    assert deleted.status_code == 204
 
 
 # --- Events ----------------------------------------------------------------

@@ -77,31 +77,31 @@ async def test_session_smart_reminders(client):
 
 
 @pytest.mark.asyncio
-async def test_analytics_kpis(client):
+async def test_analytics_pulse(client):
     headers, course, session, member = await _setup(client)
     await client.post(
         "/api/v1/bookings",
         json={"session_id": session["id"], "member_id": member["id"]},
         headers=headers,
     )
-    resp = await client.get("/api/v1/analytics/kpis", headers=headers)
+    resp = await client.get("/api/v1/analytics/pulse", headers=headers)
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["sessions"] == 1
-    assert body["bookings"] == 1
-    assert body["utilization"] == 0.1  # 1 / 10
+    assert body["new_members"] == 1
+    # Ohne Anwesenheit (nur gebucht) zählt niemand als praktizierend.
+    assert body["people_practicing"] == 0
+    assert body["total_practices"] == 0
 
 
 @pytest.mark.asyncio
-async def test_analytics_heatmap(client):
+async def test_analytics_teachers(client):
     headers, course, session, member = await _setup(client)
     await client.post(
         "/api/v1/bookings",
         json={"session_id": session["id"], "member_id": member["id"]},
         headers=headers,
     )
-    resp = await client.get("/api/v1/analytics/heatmap", headers=headers)
-    assert resp.status_code == 200
-    cells = resp.json()
-    assert len(cells) == 1
-    assert cells[0]["level"] in ("green", "yellow", "red")
+    resp = await client.get("/api/v1/analytics/teachers", headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert isinstance(resp.json(), list)

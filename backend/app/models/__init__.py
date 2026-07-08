@@ -27,6 +27,7 @@ from app.models.notification import (
     NotificationStatus,
 )
 from app.models.session import CourseSession, SessionStatus
+from app.models.student_note import StudentNote
 from app.models.tenant import Tenant
 from app.models.training import (
     TrainingArea,
@@ -67,6 +68,7 @@ __all__ = [
     "AutomationTrigger",
     "AIInsight",
     "InsightType",
+    "StudentNote",
     "Event",
     "EventRegistration",
     "EventType",

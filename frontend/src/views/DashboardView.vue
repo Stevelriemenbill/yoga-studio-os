@@ -5,8 +5,8 @@ import Tag from 'primevue/tag'
 
 import { useAuthStore } from '@/stores/auth'
 import { useRealtime } from '@/composables/useRealtime'
-import { getKpis } from '@/api/analytics'
-import type { StudioKpis } from '@/types'
+import { getCommunityPulse } from '@/api/analytics'
+import type { CommunityPulse } from '@/types'
 
 const auth = useAuthStore()
 
@@ -23,7 +23,7 @@ const roleLabel = computed(() =>
   auth.user ? (roleLabels[auth.user.role] ?? auth.user.role) : '',
 )
 
-const kpis = ref<StudioKpis | null>(null)
+const kpis = ref<CommunityPulse | null>(null)
 const loading = ref(true)
 const events = ref<string[]>([])
 
@@ -34,15 +34,11 @@ const { connected } = useRealtime((event) => {
   events.value = events.value.slice(0, 10)
 })
 
-function pct(x: number): string {
-  return `${(x * 100).toFixed(0)} %`
-}
-
 onMounted(async () => {
   try {
-    kpis.value = await getKpis()
+    kpis.value = await getCommunityPulse()
   } catch {
-    // KPIs are best-effort on the dashboard.
+    // Pulse is best-effort on the dashboard.
   } finally {
     loading.value = false
   }
@@ -64,12 +60,10 @@ onMounted(async () => {
     </div>
 
     <div v-if="kpis" class="kpis">
-      <Card><template #content><span class="k-label">Auslastung</span><span class="k-val">{{ pct(kpis.utilization) }}</span></template></Card>
-      <Card><template #content><span class="k-label">No-Show-Rate</span><span class="k-val">{{ pct(kpis.no_show_rate) }}</span></template></Card>
-      <Card><template #content><span class="k-label">Buchungen (30 T.)</span><span class="k-val">{{ kpis.bookings }}</span></template></Card>
-      <Card><template #content><span class="k-label">Kurse</span><span class="k-val">{{ kpis.sessions }}</span></template></Card>
-      <Card><template #content><span class="k-label">Check-ins</span><span class="k-val">{{ kpis.check_ins }}</span></template></Card>
-      <Card><template #content><span class="k-label">Neue Mitglieder</span><span class="k-val">{{ kpis.new_members }}</span></template></Card>
+      <Card><template #content><span class="k-label">Menschen, die praktizieren</span><span class="k-val">{{ kpis.people_practicing }}</span></template></Card>
+      <Card><template #content><span class="k-label">Gemeinsame Einheiten (30 T.)</span><span class="k-val">{{ kpis.total_practices }}</span></template></Card>
+      <Card><template #content><span class="k-label">Angebotene Stunden</span><span class="k-val">{{ kpis.sessions }}</span></template></Card>
+      <Card><template #content><span class="k-label">Neu dazugekommen</span><span class="k-val">{{ kpis.new_members }}</span></template></Card>
     </div>
 
     <div class="grid">

@@ -18,26 +18,16 @@ def _range(start: datetime | None, end: datetime | None) -> tuple[datetime, date
     return start, end
 
 
-@router.get("/kpis")
-async def kpis(
+@router.get("/pulse")
+async def community_pulse(
     start: datetime | None = Query(default=None),
     end: datetime | None = Query(default=None),
     current: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
+    """Sanfter Puls der Gemeinschaft – wie viele Menschen praktizieren gerade."""
     start, end = _range(start, end)
-    return await analytics_service.studio_kpis(db, current.tenant_id, start, end)
-
-
-@router.get("/heatmap")
-async def heatmap(
-    start: datetime | None = Query(default=None),
-    end: datetime | None = Query(default=None),
-    current: CurrentUser = Depends(require_staff),
-    db: AsyncSession = Depends(get_db),
-):
-    start, end = _range(start, end)
-    return await analytics_service.heatmap(db, current.tenant_id, start, end)
+    return await analytics_service.community_pulse(db, current.tenant_id, start, end)
 
 
 @router.get("/teachers")
@@ -47,16 +37,6 @@ async def teachers(
     current: CurrentUser = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ):
+    """Reichweite der Lehrenden: begleitete und wiederkehrende Schüler:innen."""
     start, end = _range(start, end)
-    return await analytics_service.teacher_analytics(db, current.tenant_id, start, end)
-
-
-@router.get("/popular-courses")
-async def popular_courses(
-    start: datetime | None = Query(default=None),
-    end: datetime | None = Query(default=None),
-    current: CurrentUser = Depends(require_staff),
-    db: AsyncSession = Depends(get_db),
-):
-    start, end = _range(start, end)
-    return await analytics_service.popular_courses(db, current.tenant_id, start, end)
+    return await analytics_service.teacher_reach(db, current.tenant_id, start, end)
