@@ -69,6 +69,22 @@ async def test_qr_pass_and_checkin(client):
 
 
 @pytest.mark.asyncio
+async def test_qr_full_payload_accepted(client):
+    """A camera scans the full ``studioos://checkin?token=...`` payload."""
+    headers, session, member = await _setup(client)
+    passq = await client.get(f"/api/v1/checkin/pass/{member['id']}", headers=headers)
+    payload = passq.json()["qr_payload"]
+    assert payload.startswith("studioos://checkin?token=")
+
+    resp = await client.post(
+        "/api/v1/checkin/qr",
+        json={"token": payload, "session_id": session["id"]},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+
+
+@pytest.mark.asyncio
 async def test_invalid_qr_token_rejected(client):
     headers, session, member = await _setup(client)
     resp = await client.post(

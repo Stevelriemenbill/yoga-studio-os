@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import QrScanner from 'qr-scanner'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
-import Textarea from 'primevue/textarea'
 import Card from 'primevue/card'
 
 import { listMembers } from '@/api/members'
+import { listCourses, listSessions } from '@/api/courses'
 import {
   checkInManual,
   checkInQr,
@@ -16,11 +16,20 @@ import {
   confirmAttendance,
   rejectAttendance,
 } from '@/api/training'
-import type { Member, MemberPass, CheckIn, Attendance } from '@/types'
+import type {
+  Member,
+  MemberPass,
+  CheckIn,
+  Attendance,
+  Course,
+  SessionWithStats,
+} from '@/types'
 
 const { t, locale } = useI18n()
 
 const members = ref<Member[]>([])
+const courses = ref<Course[]>([])
+const sessions = ref<SessionWithStats[]>([])
 const error = ref('')
 
 const memberOptions = computed(() =>
@@ -29,6 +38,23 @@ const memberOptions = computed(() =>
     value: m.id,
   })),
 )
+
+const courseName = computed(() => {
+  const map = new Map(courses.value.map((c) => [c.id, c.name]))
+  return (id: string) => map.get(id) ?? '—'
+})
+
+const sessionOptions = computed(() =>
+  [...sessions.value]
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .map((s) => ({
+      label: `${courseName.value(s.course_id)} · ${fmtDateTime(s.starts_at)} (${s.booked_count}/${s.capacity})`,
+      value: s.id,
+    })),
+)
+
+/** Session used for QR check-ins (required by the backend). */
+const activeSessionId = ref('')
 
 const memberName = (id: string): string => {
   const m = members.value.find((x) => x.id === id)
@@ -75,37 +101,52 @@ async function reject(a: Attendance) {
 
 // Manual check-in
 const manualMemberId = ref('')
-const manualSessionId = ref('')
 const manualResult = ref<CheckIn | null>(null)
 
 // Pass
 const passMemberId = ref('')
 const pass = ref<MemberPass | null>(null)
 
-// QR check-in
-const qrPayload = ref('')
-const qrSessionId = ref('')
+// QR check-in (camera scanner)
+const videoEl = ref<HTMLVideoElement | null>(null)
+let scanner: QrScanner | null = null
+const scanning = ref(false)
+const hasCamera = ref(true)
 const qrResult = ref<CheckIn | null>(null)
+const qrBusy = ref(false)
+// Guard against duplicate submits while a scan is in flight.
+let lastScanned = ''
 
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString(locale.value === 'de' ? 'de-DE' : 'en-US')
 }
 
-async function loadMembers() {
+async function loadInitial() {
   try {
-    members.value = await listMembers()
+    const start = new Date()
+    start.setHours(start.getHours() - 2)
+    const end = new Date()
+    end.setDate(end.getDate() + 14)
+    const [mem, crs, sess] = await Promise.all([
+      listMembers(),
+      listCourses(),
+      listSessions({ start: start.toISOString(), end: end.toISOString() }),
+    ])
+    members.value = mem
+    courses.value = crs
+    sessions.value = sess
   } catch {
     error.value = t('checkin.errors.loadMembers')
   }
 }
 
 async function doManual() {
-  if (!manualMemberId.value) return
+  if (!manualMemberId.value || !activeSessionId.value) return
   error.value = ''
   try {
     manualResult.value = await checkInManual({
       member_id: manualMemberId.value,
-      session_id: manualSessionId.value || undefined,
+      session_id: activeSessionId.value,
     })
   } catch {
     error.value = t('checkin.errors.manual')
@@ -122,22 +163,75 @@ async function loadPass() {
   }
 }
 
-async function doQr() {
-  if (!qrPayload.value) return
+async function submitToken(token: string) {
+  if (!activeSessionId.value) {
+    error.value = t('checkin.errors.noSession')
+    return
+  }
+  qrBusy.value = true
   error.value = ''
   try {
     qrResult.value = await checkInQr({
-      qr_payload: qrPayload.value,
-      session_id: qrSessionId.value || undefined,
+      token,
+      session_id: activeSessionId.value,
     })
+    await loadPending()
   } catch {
     error.value = t('checkin.errors.qr')
+  } finally {
+    qrBusy.value = false
   }
 }
 
-onMounted(() => {
-  loadMembers()
+async function onScan(result: QrScanner.ScanResult) {
+  const data = result?.data ?? ''
+  if (!data || data === lastScanned || qrBusy.value) return
+  lastScanned = data
+  await submitToken(data)
+  // Allow re-scanning the same code after a short cooldown.
+  setTimeout(() => {
+    lastScanned = ''
+  }, 3000)
+}
+
+async function startScanner() {
+  if (!videoEl.value || scanner) return
+  if (!activeSessionId.value) {
+    error.value = t('checkin.errors.noSession')
+    return
+  }
+  try {
+    scanner = new QrScanner(videoEl.value, onScan, {
+      returnDetailedScanResult: true,
+      highlightScanRegion: true,
+      highlightCodeOutline: true,
+      preferredCamera: 'environment',
+      maxScansPerSecond: 4,
+    })
+    await scanner.start()
+    scanning.value = true
+  } catch {
+    hasCamera.value = false
+    scanner?.destroy()
+    scanner = null
+    error.value = t('checkin.errors.camera')
+  }
+}
+
+function stopScanner() {
+  scanner?.stop()
+  scanning.value = false
+}
+
+onMounted(async () => {
+  loadInitial()
   loadPending()
+  hasCamera.value = await QrScanner.hasCamera().catch(() => false)
+})
+
+onBeforeUnmount(() => {
+  scanner?.destroy()
+  scanner = null
 })
 </script>
 
@@ -187,6 +281,57 @@ onMounted(() => {
     </Card>
 
     <Card class="block">
+      <template #title>{{ t('checkin.sessionTitle') }}</template>
+      <template #content>
+        <div class="form">
+          <label>{{ t('checkin.session') }}</label>
+          <Dropdown
+            v-model="activeSessionId"
+            :options="sessionOptions"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('checkin.selectSession')"
+            filter
+          />
+          <p class="muted">{{ t('checkin.sessionHint') }}</p>
+        </div>
+      </template>
+    </Card>
+
+    <Card class="block">
+      <template #title>{{ t('checkin.qrCheckinTitle') }}</template>
+      <template #content>
+        <div class="form">
+          <p v-if="!hasCamera" class="muted">{{ t('checkin.noCamera') }}</p>
+          <div class="scanner">
+            <video ref="videoEl" class="scanner-video" />
+          </div>
+          <div class="scanner-actions">
+            <Button
+              v-if="!scanning"
+              :label="t('checkin.startScan')"
+              icon="pi pi-camera"
+              :disabled="!hasCamera || !activeSessionId"
+              @click="startScanner"
+            />
+            <Button
+              v-else
+              :label="t('checkin.stopScan')"
+              icon="pi pi-stop"
+              severity="secondary"
+              outlined
+              @click="stopScanner"
+            />
+          </div>
+          <p v-if="qrBusy" class="muted">{{ t('checkin.checking') }}</p>
+          <p v-if="qrResult" class="success">
+            {{ t('checkin.checkedInAt', { time: fmtDateTime(qrResult.checked_in_at) }) }}
+          </p>
+        </div>
+      </template>
+    </Card>
+
+    <Card class="block">
       <template #title>{{ t('checkin.manualTitle') }}</template>
       <template #content>
         <div class="form">
@@ -199,9 +344,11 @@ onMounted(() => {
             :placeholder="t('checkin.selectMember')"
             filter
           />
-          <label>{{ t('checkin.sessionIdOptional') }}</label>
-          <InputText v-model="manualSessionId" />
-          <Button :label="t('checkin.checkIn')" :disabled="!manualMemberId" @click="doManual" />
+          <Button
+            :label="t('checkin.checkIn')"
+            :disabled="!manualMemberId || !activeSessionId"
+            @click="doManual"
+          />
           <p v-if="manualResult" class="success">
             {{ t('checkin.checkedInAt', { time: fmtDateTime(manualResult.checked_in_at) }) }}
           </p>
@@ -227,22 +374,6 @@ onMounted(() => {
             <p><strong>{{ t('checkin.token') }}:</strong> {{ pass.token }}</p>
             <p><strong>{{ t('checkin.qrPayload') }}:</strong> {{ pass.qr_payload }}</p>
           </template>
-        </div>
-      </template>
-    </Card>
-
-    <Card class="block">
-      <template #title>{{ t('checkin.qrCheckinTitle') }}</template>
-      <template #content>
-        <div class="form">
-          <label>{{ t('checkin.qrPayload') }}</label>
-          <Textarea v-model="qrPayload" rows="3" autoResize />
-          <label>{{ t('checkin.sessionIdOptional') }}</label>
-          <InputText v-model="qrSessionId" />
-          <Button :label="t('checkin.checkIn')" :disabled="!qrPayload" @click="doQr" />
-          <p v-if="qrResult" class="success">
-            {{ t('checkin.checkedInAt', { time: fmtDateTime(qrResult.checked_in_at) }) }}
-          </p>
         </div>
       </template>
     </Card>
@@ -275,6 +406,23 @@ onMounted(() => {
 .muted {
   color: #64748b;
   margin: 0;
+}
+.scanner {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1;
+  background: #0f172a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scanner-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 .badge {
   display: inline-grid;

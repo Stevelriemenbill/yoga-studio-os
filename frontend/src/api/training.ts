@@ -15,8 +15,8 @@ export async function getMemberPass(memberId: string): Promise<MemberPass> {
 }
 
 export async function checkInQr(payload: {
-  qr_payload: string
-  session_id?: string | null
+  token: string
+  session_id: string
   device_id?: string | null
 }): Promise<CheckIn> {
   const { data } = await api.post<CheckIn>('/checkin/qr', payload)
@@ -25,7 +25,7 @@ export async function checkInQr(payload: {
 
 export async function checkInManual(payload: {
   member_id: string
-  session_id?: string | null
+  session_id: string
 }): Promise<CheckIn> {
   const { data } = await api.post<CheckIn>('/checkin/manual', payload)
   return data

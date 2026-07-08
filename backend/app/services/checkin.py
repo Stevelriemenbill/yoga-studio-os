@@ -39,7 +39,18 @@ def member_qr_token(tenant_id: uuid.UUID, member_id: uuid.UUID) -> str:
     return f"{member_id}.{sig}"
 
 
+def _extract_token(raw: str) -> str:
+    """Accept either a bare token or a full ``studioos://checkin?token=...``
+    payload (what a camera scans from the QR code)."""
+    raw = (raw or "").strip()
+    if "token=" in raw:
+        # Take everything after the first token= up to an & separator.
+        raw = raw.split("token=", 1)[1].split("&", 1)[0]
+    return raw
+
+
 def verify_qr_token(tenant_id: uuid.UUID, token: str) -> uuid.UUID | None:
+    token = _extract_token(token)
     try:
         member_part, sig = token.split(".", 1)
         member_id = uuid.UUID(member_part)
