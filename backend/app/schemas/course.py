@@ -112,6 +112,8 @@ class SessionCreate(BaseModel):
     location: str | None = Field(default=None, max_length=255)
     is_online: bool | None = None
     online_url: str | None = Field(default=None, max_length=500)
+    #: Optional training cohort this session belongs to (e.g. a weekend block).
+    cohort_id: uuid.UUID | None = None
 
 
 class RecurrenceSchedule(BaseModel):
@@ -130,6 +132,10 @@ class RecurrenceSchedule(BaseModel):
     #: Number of occurrences to generate (alternative to ``end_date``).
     count: int | None = Field(default=None, ge=1, le=MAX_RECURRENCE_SESSIONS)
     exceptions: list[date] = Field(default_factory=list)
+    #: Repeat every N weeks (1 = weekly, 6 = every six weeks for a training).
+    interval_weeks: int = Field(default=1, ge=1, le=52)
+    #: Optional training cohort every generated session belongs to.
+    cohort_id: uuid.UUID | None = None
 
     @field_validator("weekdays")
     @classmethod
@@ -158,6 +164,7 @@ class SessionUpdate(BaseModel):
     location: str | None = Field(default=None, max_length=255)
     is_online: bool | None = None
     online_url: str | None = Field(default=None, max_length=500)
+    cohort_id: uuid.UUID | None = None
 
 
 class SessionCancel(BaseModel):
@@ -191,6 +198,7 @@ class SessionRead(BaseModel):
     id: uuid.UUID
     course_id: uuid.UUID
     series_id: uuid.UUID | None = None
+    cohort_id: uuid.UUID | None = None
     teacher_id: uuid.UUID | None
     room_id: uuid.UUID | None
     starts_at: datetime

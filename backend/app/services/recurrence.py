@@ -22,6 +22,9 @@ class RecurrenceRule:
     end_date: date | None = None
     count: int | None = None
     exceptions: set[date] | None = None
+    #: Repeat every N weeks (1 = weekly, 6 = every six weeks). Weeks are counted
+    #: from the Monday of ``start_date``'s week.
+    interval_weeks: int = 1
 
 
 #: Absolute safety limit on occurrences, even when only a count is given but
@@ -42,6 +45,11 @@ def expand_recurrence(rule: RecurrenceRule) -> list[datetime]:
     weekdays = set(rule.weekdays)
     occurrences: list[datetime] = []
 
+    interval = max(1, rule.interval_weeks)
+    # Monday of the week containing start_date; used as the anchor for the
+    # every-N-weeks filter.
+    anchor_monday = rule.start_date - timedelta(days=rule.start_date.weekday())
+
     current = rule.start_date
     scanned = 0
     while scanned < _MAX_DAYS_SCANNED:
@@ -50,7 +58,15 @@ def expand_recurrence(rule: RecurrenceRule) -> list[datetime]:
         if rule.count is not None and len(occurrences) >= rule.count:
             break
         if current.weekday() in weekdays and current not in exceptions:
-            occurrences.append(datetime.combine(current, rule.start_time))
+            if interval == 1:
+                occurrences.append(datetime.combine(current, rule.start_time))
+            else:
+                cur_monday = current - timedelta(days=current.weekday())
+                weeks_since = (cur_monday - anchor_monday).days // 7
+                if weeks_since % interval == 0:
+                    occurrences.append(
+                        datetime.combine(current, rule.start_time)
+                    )
         current += timedelta(days=1)
         scanned += 1
 

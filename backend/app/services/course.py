@@ -127,6 +127,7 @@ async def create_session(
             location=data.location,
             is_online=data.is_online,
             online_url=data.online_url,
+            cohort_id=data.cohort_id,
         )
     )
     await db.commit()
@@ -144,6 +145,7 @@ async def schedule_recurring(
         end_date=data.end_date,
         count=data.count,
         exceptions=set(data.exceptions),
+        interval_weeks=data.interval_weeks,
     )
     starts = expand_recurrence(rule)
     # Bound total work regardless of which end condition is used.
@@ -162,6 +164,7 @@ async def schedule_recurring(
             CourseSession(
                 course_id=course.id,
                 series_id=series_id,
+                cohort_id=data.cohort_id,
                 teacher_id=course.teacher_id,
                 room_id=course.room_id,
                 starts_at=start,

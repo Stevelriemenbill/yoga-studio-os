@@ -33,8 +33,13 @@ from app.models.staff_invite import StaffInvite, StaffInviteStatus
 from app.models.student_note import StudentNote
 from app.models.tenant import Tenant
 from app.models.training import (
+    CohortStatus,
+    EnrollmentStatus,
     TrainingArea,
+    TrainingCohort,
+    TrainingEnrollment,
     TrainingHours,
+    TrainingProgram,
     TrainingRequirement,
 )
 from app.models.user import STAFF_ROLES, User, UserRole
@@ -67,6 +72,11 @@ __all__ = [
     "TrainingHours",
     "TrainingRequirement",
     "TrainingArea",
+    "TrainingProgram",
+    "TrainingCohort",
+    "CohortStatus",
+    "TrainingEnrollment",
+    "EnrollmentStatus",
     "Notification",
     "NotificationChannel",
     "NotificationStatus",
