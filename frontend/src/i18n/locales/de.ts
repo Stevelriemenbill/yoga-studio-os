@@ -62,7 +62,7 @@ export default {
     },
     dashboard: 'Dashboard',
     calendar: 'Kalender',
-    schedule: 'Stundenplan',
+    schedule: 'Kursplanung',
     bookings: 'Buchungen',
     checkin: 'Check-in',
     events: 'Events',
